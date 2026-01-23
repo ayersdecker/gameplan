@@ -36,8 +36,13 @@ export const assertFirebaseConfigured = () => {
 const app = initializeApp(firebaseConfig);
 
 // Initialize Firebase services
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+// NOTE: `expo export` (and Expo Router static rendering) executes parts of the app in a Node.js environment.
+// Initializing Firebase Auth during SSR/SSG can crash the build (Auth expects a browser-like environment).
+// We only initialize client-side; hooks/components should only use these in the browser/runtime.
+const isServer = typeof window === 'undefined';
+
+export const auth = isServer ? (null as unknown as ReturnType<typeof getAuth>) : getAuth(app);
+export const db = isServer ? (null as unknown as ReturnType<typeof getFirestore>) : getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
 
 export default app;
