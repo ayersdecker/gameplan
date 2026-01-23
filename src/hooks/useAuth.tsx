@@ -70,8 +70,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await GoogleSignin.hasPlayServices();
       const userInfo = await GoogleSignin.signIn();
       
+      // Get the ID token from the response
+      const idToken = userInfo.data?.idToken;
+      
+      if (!idToken) {
+        throw new Error('No ID token received from Google Sign-In');
+      }
+      
       // Create a credential from the Google ID token
-      const googleCredential = GoogleAuthProvider.credential(userInfo.data?.idToken);
+      const googleCredential = GoogleAuthProvider.credential(idToken);
       
       // Sign in with the credential
       await signInWithCredential(auth, googleCredential);

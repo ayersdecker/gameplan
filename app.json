@@ -25,8 +25,6 @@
       },
       "package": "com.gameplan.app",
       "googleServicesFile": "./google-services.json",
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
       "permissions": ["CALENDAR", "READ_CALENDAR", "WRITE_CALENDAR"]
     },
     "web": {
