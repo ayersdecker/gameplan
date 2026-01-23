@@ -2,6 +2,8 @@
 
 App designed to connect a community of individuals to go outside and participate in shared activities and goals.
 
+Web (GitHub Pages): https://ayersdecker.github.io/gameplan/
+
 ## Features
 
 - 🔐 **Google Sign-In Authentication** - Secure authentication with Firebase Auth
