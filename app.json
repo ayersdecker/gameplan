@@ -8,6 +8,9 @@
     "userInterfaceStyle": "light",
     "scheme": "gameplan",
     "newArchEnabled": true,
+    "experiments": {
+      "baseUrl": "/gameplan"
+    },
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -28,6 +31,8 @@
       "permissions": ["CALENDAR", "READ_CALENDAR", "WRITE_CALENDAR"]
     },
     "web": {
+      "bundler": "metro",
+      "output": "static",
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
