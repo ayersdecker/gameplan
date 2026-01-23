@@ -68,7 +68,6 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<{ [key: string]: L.Marker }>({});
   const userMarkerRef = useRef<L.Marker | null>(null);
-  const radiusCircleRef = useRef<L.Circle | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
   const handleCenter = () => {
@@ -169,25 +168,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     userMarkerRef.current = userMarker;
   }, [userLocation]);
 
-  // Update radius circle
-  useEffect(() => {
-    if (!mapInstanceRef.current || !userLocation) return;
-
-    if (radiusCircleRef.current) {
-      mapInstanceRef.current.removeLayer(radiusCircleRef.current);
-    }
-
-    const circle = L.circle([userLocation.latitude, userLocation.longitude], {
-      radius: RADIUS_KM * 1000, // Convert km to meters
-      fillColor: '#007AFF',
-      fillOpacity: 0.1,
-      color: '#007AFF',
-      weight: 2,
-      dashArray: '5, 5',
-    }).addTo(mapInstanceRef.current);
-
-    radiusCircleRef.current = circle;
-  }, [userLocation, RADIUS_KM]);
+  // Intentionally not rendering the radius circle (keep filtering logic, remove visual ring)
 
   // Update activity markers
   useEffect(() => {
