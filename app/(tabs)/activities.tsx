@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { collection, query, orderBy, getDocs, where } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, where } from 'firebase/firestore';
 import { db } from '../../src/services/firebase';
 import { useAuth } from '../../src/hooks/useAuth';
 import { Activity } from '../../src/types';
@@ -23,42 +23,46 @@ export default function Activities() {
   const [filter, setFilter] = useState<'all' | 'joined' | 'created'>('all');
 
   useEffect(() => {
-    loadActivities();
-  }, [filter]);
+    if (!user) return;
 
-  const loadActivities = async () => {
-    try {
-      setLoading(true);
-      let q = query(collection(db, 'activities'), orderBy('date', 'asc'));
+    setLoading(true);
+    let q = query(collection(db, 'activities'), orderBy('date', 'asc'));
 
-      if (filter === 'joined' && user) {
-        q = query(
-          collection(db, 'activities'),
-          where('participants', 'array-contains', user.id),
-          orderBy('date', 'asc')
-        );
-      } else if (filter === 'created' && user) {
-        q = query(
-          collection(db, 'activities'),
-          where('creatorId', '==', user.id),
-          orderBy('date', 'asc')
-        );
-      }
-
-      const snapshot = await getDocs(q);
-      const activitiesData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        date: doc.data().date?.toDate() || new Date(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-      })) as Activity[];
-      setActivities(activitiesData);
-    } catch (error) {
-      console.error('Error loading activities:', error);
-    } finally {
-      setLoading(false);
+    if (filter === 'joined') {
+      q = query(
+        collection(db, 'activities'),
+        where('participants', 'array-contains', user.id),
+        orderBy('date', 'asc')
+      );
+    } else if (filter === 'created') {
+      q = query(
+        collection(db, 'activities'),
+        where('creatorId', '==', user.id),
+        orderBy('date', 'asc')
+      );
     }
-  };
+
+    // Real-time listener for activities
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const activitiesData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          date: doc.data().date?.toDate() || new Date(),
+          createdAt: doc.data().createdAt?.toDate() || new Date(),
+        })) as Activity[];
+        setActivities(activitiesData);
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Error loading activities:', error);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [filter, user]);
 
   const filteredActivities = activities.filter((activity) =>
     activity.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -168,13 +172,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#fff',
-    padding: 24,
-    paddingTop: 60,
+    padding: 16,
+    paddingTop: 48,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
   },
@@ -186,7 +190,7 @@ const styles = StyleSheet.create({
   },
   createButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
   searchContainer: {

@@ -16,5 +16,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
+     fontFamily: 'Roboto',
   },
 });
+
+// Global font style for web
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+   // Load Roboto from Google Fonts for web
+   const link = document.createElement('link');
+   link.rel = 'stylesheet';
+   link.href = 'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap';
+   document.head.appendChild(link);
+
+   style.textContent = `
+     * { font-family: Roboto, sans-serif !important; }
+     html, body { font-family: Roboto, sans-serif !important; }
+   `;
+  document.head.appendChild(style);
+}

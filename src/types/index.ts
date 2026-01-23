@@ -14,6 +14,8 @@ export interface Activity {
   description: string;
   category: string;
   location?: string;
+  latitude?: number;
+  longitude?: number;
   date: Date;
   creatorId: string;
   creatorName: string;

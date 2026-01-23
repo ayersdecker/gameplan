@@ -24,6 +24,7 @@ import {
   onSnapshot,
   addDoc,
   serverTimestamp,
+  deleteDoc,
 } from 'firebase/firestore';
 import { db } from '../../src/services/firebase';
 import { useAuth } from '../../src/hooks/useAuth';
@@ -44,15 +45,30 @@ export default function ActivityDetail() {
   useEffect(() => {
     if (!id) return;
 
-    loadActivity();
-    
+    // Subscribe to activity changes
+    const activityUnsubscribe = onSnapshot(doc(db, 'activities', id), (snapshot) => {
+      if (!snapshot.exists()) {
+        // Activity was deleted, navigate back
+        console.log('Activity was deleted, navigating back');
+        router.back();
+        return;
+      }
+      const data = snapshot.data();
+      setActivity({
+        id: snapshot.id,
+        ...data,
+        date: data.date?.toDate() || new Date(),
+        createdAt: data.createdAt?.toDate() || new Date(),
+      } as Activity);
+    });
+
     // Subscribe to messages
     const messagesQuery = query(
       collection(db, 'activities', id, 'messages'),
       orderBy('createdAt', 'asc')
     );
 
-    const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+    const messagesUnsubscribe = onSnapshot(messagesQuery, (snapshot) => {
       const messagesData = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
@@ -61,7 +77,11 @@ export default function ActivityDetail() {
       setMessages(messagesData);
     });
 
-    return () => unsubscribe();
+    setLoading(false);
+    return () => {
+      activityUnsubscribe();
+      messagesUnsubscribe();
+    };
   }, [id]);
 
   const loadActivity = async () => {
@@ -165,6 +185,32 @@ export default function ActivityDetail() {
     await addActivityToCalendar(activity);
   };
 
+  const handleDeleteActivity = async () => {
+    if (!activity || !id) {
+      Alert.alert('Error', 'Missing activity or id');
+      return;
+    }
+
+    // Use browser confirm for web
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this activity? This cannot be undone.'
+    );
+
+    if (!confirmed) {
+      console.log('Delete cancelled');
+      return;
+    }
+
+    try {
+      console.log('Deleting activity:', id);
+      await deleteDoc(doc(db, 'activities', id));
+      console.log('Activity deleted successfully');
+    } catch (error) {
+      console.error('Error deleting activity:', error);
+      Alert.alert('Error', `Failed to delete activity: ${error}`);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -231,8 +277,13 @@ export default function ActivityDetail() {
                 <Text style={styles.leaveButtonText}>Leave Activity</Text>
               </TouchableOpacity>
             ) : (
-              <View style={styles.creatorBadge}>
-                <Text style={styles.creatorBadgeText}>You created this activity</Text>
+              <View>
+                <View style={styles.creatorBadge}>
+                  <Text style={styles.creatorBadgeText}>You created this activity</Text>
+                </View>
+                <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteActivity}>
+                  <Text style={styles.deleteButtonText}>🗑️ Delete Activity</Text>
+                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -482,4 +533,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-});
+  deleteButton: {
+    backgroundColor: '#ff3b30',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },});

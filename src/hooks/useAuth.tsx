@@ -1,7 +1,9 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { User as FirebaseUser, signInWithCredential, signOut as firebaseSignOut, GoogleAuthProvider } from 'firebase/auth';
+import { User as FirebaseUser, signInWithCredential, signOut as firebaseSignOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { Platform } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
 import { auth, db } from '../services/firebase';
 import { User } from '../types';
 
@@ -15,15 +17,17 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Configure Google Sign-In
-GoogleSignin.configure({
-  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || 'your-web-client-id.apps.googleusercontent.com',
-});
+WebBrowser.maybeCompleteAuthSession();
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    clientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || 'your-web-client-id.apps.googleusercontent.com',
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+  });
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
@@ -65,23 +69,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, []);
 
+  // Handle the Google auth response for native/mobile
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { authentication } = response;
+      if (authentication?.idToken) {
+        handleGoogleSignInToken(authentication.idToken);
+      }
+    }
+  }, [response]);
+
+  const handleGoogleSignInToken = async (idToken: string) => {
+    try {
+      const googleCredential = GoogleAuthProvider.credential(idToken);
+      await signInWithCredential(auth, googleCredential);
+    } catch (error) {
+      console.error('Firebase Sign-In Error:', error);
+      throw error;
+    }
+  };
+
   const signInWithGoogle = async () => {
     try {
-      await GoogleSignin.hasPlayServices();
-      const userInfo = await GoogleSignin.signIn();
-      
-      // Get the ID token from the response
-      const idToken = userInfo.data?.idToken;
-      
-      if (!idToken) {
-        throw new Error('No ID token received from Google Sign-In');
+      // Use Firebase's signInWithPopup for web (works better in browser environments)
+      if (Platform.OS === 'web') {
+        const provider = new GoogleAuthProvider();
+        await signInWithPopup(auth, provider);
+      } else {
+        // Use expo-auth-session for native platforms
+        const result = await promptAsync();
+        if (result?.type !== 'success') {
+          throw new Error('Google Sign-In was cancelled');
+        }
       }
-      
-      // Create a credential from the Google ID token
-      const googleCredential = GoogleAuthProvider.credential(idToken);
-      
-      // Sign in with the credential
-      await signInWithCredential(auth, googleCredential);
     } catch (error) {
       console.error('Google Sign-In Error:', error);
       throw error;
@@ -90,7 +110,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      await GoogleSignin.signOut();
       await firebaseSignOut(auth);
     } catch (error) {
       console.error('Sign Out Error:', error);
