@@ -4,7 +4,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
-import { auth, db } from '../services/firebase';
+import { auth, db, assertFirebaseConfigured } from '../services/firebase';
 import { User } from '../types';
 
 interface AuthContextType {
@@ -91,6 +91,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async () => {
     try {
+      assertFirebaseConfigured();
+
       // Use Firebase's signInWithPopup for web (works better in browser environments)
       if (Platform.OS === 'web') {
         const provider = new GoogleAuthProvider();
