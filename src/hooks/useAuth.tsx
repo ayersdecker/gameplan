@@ -1,8 +1,8 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { User as FirebaseUser, signInWithCredential, signOut as firebaseSignOut } from 'firebase/auth';
+import { User as FirebaseUser, signInWithCredential, signOut as firebaseSignOut, GoogleAuthProvider } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { auth, db, googleProvider } from '../services/firebase';
+import { auth, db } from '../services/firebase';
 import { User } from '../types';
 
 interface AuthContextType {
@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userInfo = await GoogleSignin.signIn();
       
       // Create a credential from the Google ID token
-      const googleCredential = googleProvider.credential(userInfo.data?.idToken);
+      const googleCredential = GoogleAuthProvider.credential(userInfo.data?.idToken);
       
       // Sign in with the credential
       await signInWithCredential(auth, googleCredential);
