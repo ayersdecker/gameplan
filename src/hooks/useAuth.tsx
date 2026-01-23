@@ -53,10 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             badges: [],
             createdAt: new Date(),
           };
-          await setDoc(doc(db, 'users', firebaseUser.uid), {
-            ...newUser,
-            createdAt: new Date(),
-          });
+          await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
           setUser(newUser);
         }
       } else {

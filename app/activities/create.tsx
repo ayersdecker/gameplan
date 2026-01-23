@@ -36,6 +36,18 @@ export default function CreateActivity() {
       return;
     }
 
+    // Validate date format and value
+    const activityDate = new Date(date);
+    if (isNaN(activityDate.getTime())) {
+      Alert.alert('Error', 'Invalid date format. Please use YYYY-MM-DD HH:MM');
+      return;
+    }
+
+    if (activityDate < new Date()) {
+      Alert.alert('Error', 'Activity date must be in the future');
+      return;
+    }
+
     try {
       setLoading(true);
       
@@ -44,7 +56,7 @@ export default function CreateActivity() {
         description: description.trim(),
         category,
         location: location.trim() || null,
-        date: new Date(date),
+        date: activityDate,
         creatorId: user.id,
         creatorName: user.displayName,
         participants: [user.id],

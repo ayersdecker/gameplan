@@ -1,4 +1,4 @@
-import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { Badge, BadgeType } from '../types';
 
@@ -33,6 +33,19 @@ const BADGE_DEFINITIONS: Record<BadgeType, Omit<Badge, 'id' | 'earnedAt'>> = {
 export async function awardBadge(userId: string, badgeType: BadgeType) {
   try {
     const badgeDef = BADGE_DEFINITIONS[badgeType];
+    
+    // Check if user already has this badge
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      const existingBadges = userData.badges || [];
+      
+      // Check if badge already exists
+      if (existingBadges.some((badge: Badge) => badge.id === badgeType)) {
+        return null; // Badge already awarded
+      }
+    }
+    
     const badge: Badge = {
       id: badgeType,
       ...badgeDef,
