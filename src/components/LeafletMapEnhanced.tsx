@@ -248,6 +248,37 @@ const LeafletMapEnhanced: React.FC<LeafletMapProps> = ({
     };
   }, [L]);
 
+  // Fix map size when component becomes visible
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+
+    const resizeMap = () => {
+      if (mapInstanceRef.current) {
+        setTimeout(() => {
+          mapInstanceRef.current?.invalidateSize();
+        }, 100);
+      }
+    };
+
+    // Resize when tab becomes visible
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        resizeMap();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", resizeMap);
+
+    // Initial resize
+    resizeMap();
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", resizeMap);
+    };
+  }, []);
+
   // Update user location marker and radius
   useEffect(() => {
     if (!L || !mapInstanceRef.current || !userLocation) return;

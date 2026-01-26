@@ -187,7 +187,11 @@ export default function ActivityDetail() {
       setMessageText("");
     } catch (error) {
       console.error("Error sending message:", error);
-      Alert.alert("Error", "Failed to send message");
+      if (Platform.OS === "web") {
+        window.alert("Failed to send message");
+      } else {
+        Alert.alert("Error", "Failed to send message");
+      }
     } finally {
       setSending(false);
     }
