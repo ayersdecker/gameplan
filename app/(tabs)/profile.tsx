@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,24 +8,39 @@ import {
   TextInput,
   Image,
   Alert,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../src/services/firebase';
-import { useAuth } from '../../src/hooks/useAuth';
+  Platform,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "../../src/services/firebase";
+import { useAuth } from "../../src/hooks/useAuth";
 
 const INTEREST_OPTIONS = [
-  'Hiking', 'Running', 'Cycling', 'Swimming', 'Yoga',
-  'Basketball', 'Soccer', 'Tennis', 'Climbing', 'Fitness',
-  'Dancing', 'Photography', 'Cooking', 'Reading', 'Music',
+  "Hiking",
+  "Running",
+  "Cycling",
+  "Swimming",
+  "Yoga",
+  "Basketball",
+  "Soccer",
+  "Tennis",
+  "Climbing",
+  "Fitness",
+  "Dancing",
+  "Photography",
+  "Cooking",
+  "Reading",
+  "Music",
 ];
 
 export default function Profile() {
   const { user, signOut } = useAuth();
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
-  const [displayName, setDisplayName] = useState(user?.displayName || '');
-  const [selectedInterests, setSelectedInterests] = useState<string[]>(user?.interests || []);
+  const [displayName, setDisplayName] = useState(user?.displayName || "");
+  const [selectedInterests, setSelectedInterests] = useState<string[]>(
+    user?.interests || [],
+  );
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
@@ -33,15 +48,15 @@ export default function Profile() {
 
     try {
       setLoading(true);
-      await updateDoc(doc(db, 'users', user.id), {
+      await updateDoc(doc(db, "users", user.id), {
         displayName,
         interests: selectedInterests,
       });
-      Alert.alert('Success', 'Profile updated successfully!');
+      Alert.alert("Success", "Profile updated successfully!");
       setIsEditing(false);
     } catch (error) {
-      console.error('Error updating profile:', error);
-      Alert.alert('Error', 'Failed to update profile');
+      console.error("Error updating profile:", error);
+      Alert.alert("Error", "Failed to update profile");
     } finally {
       setLoading(false);
     }
@@ -56,17 +71,25 @@ export default function Profile() {
   };
 
   const handleSignOut = async () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: async () => {
-          await signOut();
-          router.replace('/(auth)/signin');
+    if (Platform.OS === "web") {
+      // On web, use window.confirm instead of Alert.alert
+      if (window.confirm("Are you sure you want to sign out?")) {
+        await signOut();
+        router.replace("/(auth)/signin");
+      }
+    } else {
+      Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Sign Out",
+          style: "destructive",
+          onPress: async () => {
+            await signOut();
+            router.replace("/(auth)/signin");
+          },
         },
-      },
-    ]);
+      ]);
+    }
   };
 
   if (!user) return null;
@@ -114,6 +137,18 @@ export default function Profile() {
         </View>
 
         <View style={styles.section}>
+          <TouchableOpacity
+            style={styles.friendsButton}
+            onPress={() => router.push("/friends/")}
+          >
+            <Text style={styles.friendsButtonText}>
+              👥 Friends ({user.friends?.length || 0})
+            </Text>
+            <Text style={styles.friendsButtonArrow}>→</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Interests</Text>
           {isEditing ? (
             <View style={styles.interestsGrid}>
@@ -122,14 +157,16 @@ export default function Profile() {
                   key={interest}
                   style={[
                     styles.interestChip,
-                    selectedInterests.includes(interest) && styles.interestChipSelected,
+                    selectedInterests.includes(interest) &&
+                      styles.interestChipSelected,
                   ]}
                   onPress={() => toggleInterest(interest)}
                 >
                   <Text
                     style={[
                       styles.interestText,
-                      selectedInterests.includes(interest) && styles.interestTextSelected,
+                      selectedInterests.includes(interest) &&
+                        styles.interestTextSelected,
                     ]}
                   >
                     {interest}
@@ -158,12 +195,16 @@ export default function Profile() {
                 <View key={index} style={styles.badgeCard}>
                   <Text style={styles.badgeIcon}>{badge.iconName}</Text>
                   <Text style={styles.badgeName}>{badge.name}</Text>
-                  <Text style={styles.badgeDescription}>{badge.description}</Text>
+                  <Text style={styles.badgeDescription}>
+                    {badge.description}
+                  </Text>
                 </View>
               ))}
             </View>
           ) : (
-            <Text style={styles.noBadges}>No badges earned yet. Join activities to earn badges!</Text>
+            <Text style={styles.noBadges}>
+              No badges earned yet. Join activities to earn badges!
+            </Text>
           )}
         </View>
 
@@ -178,42 +219,42 @@ export default function Profile() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#fff",
     padding: 24,
     paddingTop: 60,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: "#e0e0e0",
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   editButton: {
     fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
+    color: "#007AFF",
+    fontWeight: "600",
   },
   saveButton: {
     fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
+    color: "#007AFF",
+    fontWeight: "600",
   },
   content: {
     flex: 1,
   },
   profileSection: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 24,
-    alignItems: 'center',
+    alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: "#e0e0e0",
   },
   avatarContainer: {
     marginBottom: 16,
@@ -227,87 +268,104 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#007AFF",
+    justifyContent: "center",
+    alignItems: "center",
   },
   avatarText: {
     fontSize: 40,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
+    color: "#fff",
   },
   name: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 4,
   },
   nameInput: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 4,
     borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+    borderBottomColor: "#ccc",
     paddingVertical: 4,
-    textAlign: 'center',
+    textAlign: "center",
   },
   email: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 16,
     marginTop: 12,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 12,
   },
   interestsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   interestChip: {
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: "#e0e0e0",
   },
   interestChipSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: "#007AFF",
+    borderColor: "#007AFF",
   },
   interestText: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
   interestTextSelected: {
-    color: '#fff',
-    fontWeight: '600',
+    color: "#fff",
+    fontWeight: "600",
   },
   noInterests: {
     fontSize: 14,
-    color: '#999',
-    fontStyle: 'italic',
+    color: "#999",
+    fontStyle: "italic",
+  },
+  friendsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#007AFF",
+    padding: 16,
+    borderRadius: 12,
+  },
+  friendsButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  friendsButtonArrow: {
+    fontSize: 20,
+    color: "#fff",
   },
   badgesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
   },
   badgeCard: {
-    width: '48%',
-    backgroundColor: '#f5f5f5',
+    width: "48%",
+    backgroundColor: "#f5f5f5",
     borderRadius: 12,
     padding: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   badgeIcon: {
     fontSize: 40,
@@ -315,30 +373,30 @@ const styles = StyleSheet.create({
   },
   badgeName: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 4,
   },
   badgeDescription: {
     fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
   },
   noBadges: {
     fontSize: 14,
-    color: '#999',
-    fontStyle: 'italic',
+    color: "#999",
+    fontStyle: "italic",
   },
   signOutButton: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: "#FF3B30",
     margin: 16,
     padding: 16,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   signOutText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

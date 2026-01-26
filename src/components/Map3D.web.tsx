@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Activity } from '../types';
+import React, { useEffect, useRef, useState } from "react";
+import { Activity } from "../types";
 
-interface Map3DProps {
+interface IsometricMapProps {
   activities: Activity[];
   nearbyActivities: Activity[];
   userLocation: { latitude: number; longitude: number } | null;
@@ -11,8 +11,8 @@ interface Map3DProps {
   RADIUS_KM: number;
 }
 
-// This component is only rendered on web via next/dynamic
-export const Map3D: React.FC<Map3DProps> = ({
+// Isometric city-style map for finding activities
+export const Map3D: React.FC<IsometricMapProps> = ({
   activities,
   nearbyActivities,
   userLocation,
@@ -25,325 +25,525 @@ export const Map3D: React.FC<Map3DProps> = ({
   const sceneRef = useRef<any>(null);
   const cameraRef = useRef<any>(null);
   const rendererRef = useRef<any>(null);
-  const terrainRef = useRef<any>(null);
+  const cityGroupRef = useRef<any>(null);
   const markerGroupRef = useRef<any>(null);
   const raycasterRef = useRef<any>(null);
   const mouseRef = useRef<any>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const panOffsetRef = useRef({ x: 0, z: 0 });
+  const zoomRef = useRef(1);
+
+  const selectedActivityRef = useRef<Activity | null>(null);
+  const onSelectActivityRef = useRef<(activity: Activity) => void>(() => {});
+  const onViewActivityRef = useRef<(activity: Activity) => void>(() => {});
 
   useEffect(() => {
-    if (!containerRef.current || isInitialized) {
-      console.log('[Map3D] Skipping init', { hasContainer: !!containerRef.current, isInitialized });
-      return;
-    }
+    selectedActivityRef.current = selectedActivity;
+  }, [selectedActivity]);
 
-    console.log('[Map3D] Starting initialization check...');
+  useEffect(() => {
+    onSelectActivityRef.current = onSelectActivity;
+  }, [onSelectActivity]);
 
-    // Add a small delay to ensure container has dimensions
+  useEffect(() => {
+    onViewActivityRef.current = onViewActivity;
+  }, [onViewActivity]);
+
+  useEffect(() => {
+    if (!containerRef.current || isInitialized) return;
+
     const timer = setTimeout(() => {
       const width = containerRef.current?.clientWidth || 0;
       const height = containerRef.current?.clientHeight || 0;
-      
-      console.log('[Map3D] Container dimensions:', { width, height });
 
       if (width > 0 && height > 0) {
-        console.log('[Map3D] Dimensions valid, attempting Three.js import...');
-        
-        // Dynamically import Three.js only on web
-        import('three')
+        import("three")
           .then((module) => {
-            console.log('[Map3D] Three.js imported successfully:', { hasScene: !!module.Scene });
             const THREE = module;
             initializeScene(THREE, containerRef.current!);
             setIsInitialized(true);
           })
           .catch((err) => {
-            console.error('[Map3D] Failed to import Three.js:', err);
+            console.error("[IsometricMap] Failed to import Three.js:", err);
           });
-      } else {
-        console.warn('[Map3D] Container does not have valid dimensions yet', { width, height });
-        // Try again
-        setTimeout(() => {
-          console.log('[Map3D] Retrying after delay...');
-          if (containerRef.current?.clientWidth && containerRef.current?.clientHeight) {
-            import('three')
-              .then((module) => {
-                console.log('[Map3D] Three.js imported successfully (retry)');
-                const THREE = module;
-                initializeScene(THREE, containerRef.current!);
-                setIsInitialized(true);
-              })
-              .catch((err) => console.error('[Map3D] Import failed (retry):', err));
-          }
-        }, 500);
       }
     }, 100);
 
     return () => clearTimeout(timer);
   }, [isInitialized]);
 
+  // Update city and markers
+  useEffect(() => {
+    if (!cityGroupRef.current || !markerGroupRef.current || !sceneRef.current)
+      return;
+
+    import("three").then((THREE) => {
+      // Clear old city
+      cityGroupRef.current.clear();
+
+      // Create stylized city blocks
+      createCity(THREE, cityGroupRef.current);
+
+      // Update markers
+      updateMarkers(THREE);
+    });
+  }, [userLocation]);
+
   // Update markers when activities change
   useEffect(() => {
-    if (!markerGroupRef.current || !userLocation || !sceneRef.current) return;
+    if (!markerGroupRef.current || !sceneRef.current) return;
 
-    // Clear existing markers
+    import("three").then((THREE) => {
+      updateMarkers(THREE);
+    });
+  }, [nearbyActivities, selectedActivity]);
+
+  const createCity = (THREE: any, cityGroup: any) => {
+    // Ground plane - simple grid pattern
+    const groundSize = 800;
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(groundSize, groundSize),
+      new THREE.MeshStandardMaterial({
+        color: 0xe8e8e8,
+        roughness: 0.9,
+      }),
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    cityGroup.add(ground);
+
+    // Grid lines
+    const gridHelper = new THREE.GridHelper(groundSize, 80, 0xcccccc, 0xdddddd);
+    gridHelper.position.y = 0.1;
+    cityGroup.add(gridHelper);
+
+    // Create city blocks (buildings, parks, roads)
+    const blockSize = 40;
+    const gridSize = 10;
+
+    for (let i = -gridSize; i < gridSize; i++) {
+      for (let j = -gridSize; j < gridSize; j++) {
+        const x = i * blockSize;
+        const z = j * blockSize;
+
+        // Every 3rd is a road
+        if (i % 3 === 0 || j % 3 === 0) {
+          // Road block - darker gray
+          const road = new THREE.Mesh(
+            new THREE.BoxGeometry(blockSize - 2, 0.2, blockSize - 2),
+            new THREE.MeshStandardMaterial({ color: 0x666666 }),
+          );
+          road.position.set(x, 0.1, z);
+          cityGroup.add(road);
+        } else {
+          // Random: building or park
+          const isBuilding = Math.random() > 0.3;
+
+          if (isBuilding) {
+            // Building
+            const height = 10 + Math.random() * 30;
+            const building = new THREE.Mesh(
+              new THREE.BoxGeometry(blockSize - 4, height, blockSize - 4),
+              new THREE.MeshStandardMaterial({
+                color: new THREE.Color().setHSL(
+                  0.6,
+                  0.1,
+                  0.7 + Math.random() * 0.2,
+                ),
+                roughness: 0.8,
+              }),
+            );
+            building.position.set(x, height / 2, z);
+            building.castShadow = true;
+            building.receiveShadow = true;
+            cityGroup.add(building);
+
+            // Windows
+            const windowsGroup = new THREE.Group();
+            const windowColor = Math.random() > 0.5 ? 0xffeb3b : 0x64b5f6;
+            for (let floor = 0; floor < height / 5; floor++) {
+              for (let w = 0; w < 3; w++) {
+                const window = new THREE.Mesh(
+                  new THREE.BoxGeometry(2, 1.5, 0.2),
+                  new THREE.MeshBasicMaterial({
+                    color: windowColor,
+                    emissive: windowColor,
+                    emissiveIntensity: 0.5,
+                  }),
+                );
+                window.position.set(
+                  x + (w - 1) * 6,
+                  floor * 5 + 2,
+                  z + (blockSize - 4) / 2 + 0.1,
+                );
+                cityGroup.add(window);
+              }
+            }
+          } else {
+            // Park (green area)
+            const park = new THREE.Mesh(
+              new THREE.BoxGeometry(blockSize - 4, 0.5, blockSize - 4),
+              new THREE.MeshStandardMaterial({ color: 0x7cb342 }),
+            );
+            park.position.set(x, 0.25, z);
+            park.receiveShadow = true;
+            cityGroup.add(park);
+
+            // Trees
+            for (let t = 0; t < 4; t++) {
+              const treeX = x + (Math.random() - 0.5) * (blockSize - 10);
+              const treeZ = z + (Math.random() - 0.5) * (blockSize - 10);
+
+              const trunk = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.5, 0.8, 4, 6),
+                new THREE.MeshStandardMaterial({ color: 0x5d4037 }),
+              );
+              trunk.position.set(treeX, 2, treeZ);
+              trunk.castShadow = true;
+              cityGroup.add(trunk);
+
+              const foliage = new THREE.Mesh(
+                new THREE.ConeGeometry(3, 8, 8),
+                new THREE.MeshStandardMaterial({ color: 0x388e3c }),
+              );
+              foliage.position.set(treeX, 7, treeZ);
+              foliage.castShadow = true;
+              cityGroup.add(foliage);
+            }
+          }
+        }
+      }
+    }
+  };
+
+  const updateMarkers = (THREE: any) => {
+    if (!markerGroupRef.current || !userLocation) return;
+
     markerGroupRef.current.clear();
 
-    import('three').then((THREE) => {
-      const categoryColors: { [key: string]: number } = {
-        Outdoor: 0xff6b6b,
-        Sports: 0xffd93d,
-        Fitness: 0x6bcb77,
-        Social: 0x4d96ff,
-        Learning: 0x9d84b7,
-        Arts: 0xf4a261,
-        Other: 0x95a5a6,
+    const categoryColors: { [key: string]: number } = {
+      Outdoor: 0xff5252,
+      Sports: 0xffd740,
+      Fitness: 0x69f0ae,
+      Social: 0x448aff,
+      Learning: 0xe040fb,
+      Arts: 0xff6e40,
+      Other: 0xab47bc,
+    };
+
+    // User location marker
+    const userPin = createLocationPin(THREE, 0x2196f3, 25);
+    userPin.position.set(panOffsetRef.current.x, 0, panOffsetRef.current.z);
+    userPin.userData = { kind: "user", baseY: 0 };
+    markerGroupRef.current.add(userPin);
+
+    // Pulsing ring around user
+    const ringGeo = new THREE.TorusGeometry(6, 1, 8, 32);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0x2196f3,
+      transparent: true,
+      opacity: 0.5,
+    });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.set(panOffsetRef.current.x, 0.5, panOffsetRef.current.z);
+    ring.userData = { kind: "userRing", phase: 0 };
+    markerGroupRef.current.add(ring);
+
+    // Activity markers
+    nearbyActivities.forEach((activity) => {
+      if (!activity.latitude || !activity.longitude || !userLocation) return;
+
+      const latDiff = activity.latitude - userLocation.latitude;
+      const lonDiff = activity.longitude - userLocation.longitude;
+
+      // Scale: map degrees to world units (adjust for visibility)
+      const scale = 3000;
+      const x = lonDiff * scale + panOffsetRef.current.x;
+      const z = -latDiff * scale + panOffsetRef.current.z;
+
+      // Clamp to visible range
+      const maxRange = 350;
+      const distFromCenter = Math.sqrt(
+        (x - panOffsetRef.current.x) ** 2 + (z - panOffsetRef.current.z) ** 2,
+      );
+      if (distFromCenter > maxRange) return;
+
+      const color = categoryColors[activity.category] || categoryColors.Other;
+
+      const activityPin = createLocationPin(THREE, color, 20);
+      activityPin.position.set(x, 0, z);
+      activityPin.userData = {
+        kind: "activity",
+        activity,
+        baseY: 0,
+        phase: Math.random() * Math.PI * 2,
       };
+      markerGroupRef.current.add(activityPin);
 
-      // Add user location marker
-      const userMarkerGeometry = new THREE.ConeGeometry(3, 10, 8);
-      const userMarkerMaterial = new THREE.MeshStandardMaterial({ color: 0x007aff });
-      const userMarker = new THREE.Mesh(userMarkerGeometry, userMarkerMaterial);
-      userMarker.position.set(0, 0, 0);
-      userMarker.castShadow = true;
-      markerGroupRef.current.add(userMarker);
-
-      // Add activity markers
-      nearbyActivities.forEach((activity) => {
-        if (!activity.latitude || !activity.longitude || !userLocation) return;
-
-        // Calculate distance and position
-        const R = 6371; // Earth's radius in km
-        const dLat = ((activity.latitude - userLocation.latitude) * Math.PI) / 180;
-        const dLon = ((activity.longitude - userLocation.longitude) * Math.PI) / 180;
-        const a =
-          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos((userLocation.latitude * Math.PI) / 180) *
-            Math.cos((activity.latitude * Math.PI) / 180) *
-            Math.sin(dLon / 2) *
-            Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        const distance = R * c;
-
-        const normalizedDistance = Math.min(distance / RADIUS_KM, 1);
-        const angle = Math.atan2(
-          activity.longitude - userLocation.longitude,
-          activity.latitude - userLocation.latitude
-        );
-
-        const x = normalizedDistance * RADIUS_KM * 30 * Math.cos(angle);
-        const z = normalizedDistance * RADIUS_KM * 30 * Math.sin(angle);
-        const y = Math.random() * 20 + 10;
-
-        // Create marker as sphere
-        const markerGeometry = new THREE.SphereGeometry(2, 32, 32);
-        const color = categoryColors[activity.category] || categoryColors.Other;
-        const markerMaterial = new THREE.MeshStandardMaterial({
+      // Vertical beam
+      const beam = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.8, 0.8, 60, 8),
+        new THREE.MeshBasicMaterial({
           color,
-          roughness: 0.4,
-          metalness: 0.6,
-        });
+          transparent: true,
+          opacity: 0.2,
+        }),
+      );
+      beam.position.set(x, 30, z);
+      beam.userData = {
+        kind: "beam",
+        baseY: 30,
+        phase: activityPin.userData.phase,
+      };
+      markerGroupRef.current.add(beam);
 
-        const marker = new THREE.Mesh(markerGeometry, markerMaterial);
-        marker.position.set(x, y, z);
-        marker.castShadow = true;
-        marker.receiveShadow = true;
-        (marker as any).activity = activity;
-
-        // Add glow for selected activity
-        if (selectedActivity?.id === activity.id) {
-          const glowGeometry = new THREE.SphereGeometry(3, 32, 32);
-          const glowMaterial = new THREE.MeshBasicMaterial({
+      // Selection glow
+      if (selectedActivity?.id === activity.id) {
+        const glow = new THREE.Mesh(
+          new THREE.SphereGeometry(8, 16, 16),
+          new THREE.MeshBasicMaterial({
             color,
             transparent: true,
-            opacity: 0.3,
-          });
-          const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-          glow.position.copy(marker.position);
-          markerGroupRef.current!.add(glow);
-        }
-
-        markerGroupRef.current!.add(marker);
-      });
+            opacity: 0.2,
+          }),
+        );
+        glow.position.set(x, 10, z);
+        glow.userData = { kind: "glow", phase: activityPin.userData.phase };
+        markerGroupRef.current.add(glow);
+      }
     });
-  }, [nearbyActivities, selectedActivity, userLocation, RADIUS_KM]);
+  };
+
+  const createLocationPin = (THREE: any, color: number, height: number) => {
+    const group = new THREE.Group();
+
+    // Pin shaft
+    const shaft = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.5, 1, height * 0.6, 8),
+      new THREE.MeshStandardMaterial({
+        color,
+        emissive: color,
+        emissiveIntensity: 0.3,
+      }),
+    );
+    shaft.position.y = height * 0.3;
+    shaft.castShadow = true;
+    group.add(shaft);
+
+    // Pin head
+    const head = new THREE.Mesh(
+      new THREE.SphereGeometry(3, 16, 16),
+      new THREE.MeshStandardMaterial({
+        color,
+        emissive: color,
+        emissiveIntensity: 0.4,
+        metalness: 0.3,
+        roughness: 0.4,
+      }),
+    );
+    head.position.y = height;
+    head.castShadow = true;
+    group.add(head);
+
+    return group;
+  };
 
   const initializeScene = (THREE: any, container: HTMLDivElement) => {
-    console.log('[Map3D] initializeScene called', { 
-      width: container.clientWidth, 
-      height: container.clientHeight,
-      hasThree: !!THREE,
-    });
-    
-    if (!container.clientWidth || !container.clientHeight) {
-      console.error('[Map3D] Container has invalid dimensions');
-      return;
-    }
-    
-    // Scene setup
-    const scene = new THREE.Scene();
-    console.log('[Map3D] Scene created');
-    scene.background = new THREE.Color(0x87ceeb);
-    scene.fog = new THREE.Fog(0x87ceeb, 300, 1000);
-
-    // Camera setup
     const width = container.clientWidth;
     const height = container.clientHeight;
-    
-    if (width <= 0 || height <= 0) {
-      console.error('Container has invalid dimensions:', { width, height });
-      return;
-    }
-    
-    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-    camera.position.set(80, 100, 80);
-    camera.lookAt(0, 30, 0);
 
-    // Renderer setup
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    // Scene
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
+    scene.fog = new THREE.Fog(0x87ceeb, 400, 800);
+
+    // Isometric camera (orthographic for true isometric view)
+    const aspect = width / height;
+    const frustumSize = 200;
+    const camera = new THREE.OrthographicCamera(
+      (frustumSize * aspect) / -2,
+      (frustumSize * aspect) / 2,
+      frustumSize / 2,
+      frustumSize / -2,
+      1,
+      1000,
+    );
+    camera.position.set(100, 100, 100);
+    camera.lookAt(0, 0, 0);
+
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
-    renderer.setPixelRatio(window.devicePixelRatio || 1);
+    renderer.setPixelRatio(window.devicePixelRatio);
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFShadowShadowMap;
-    console.log('[Map3D] Renderer created, appending to container...');
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
-    console.log('[Map3D] Renderer DOM element appended successfully');
 
     // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(100, 200, 100);
-    directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 2048;
-    directionalLight.shadow.mapSize.height = 2048;
-    scene.add(directionalLight);
+    const sunLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    sunLight.position.set(100, 150, 50);
+    sunLight.castShadow = true;
+    sunLight.shadow.camera.left = -200;
+    sunLight.shadow.camera.right = 200;
+    sunLight.shadow.camera.top = 200;
+    sunLight.shadow.camera.bottom = -200;
+    sunLight.shadow.camera.near = 1;
+    sunLight.shadow.camera.far = 400;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    scene.add(sunLight);
 
-    // Generate low-poly terrain
-    const terrainGeometry = generateLowPolyTerrain(THREE, 200, 200, 50);
-    const terrainMaterial = new THREE.MeshStandardMaterial({
-      color: 0x2d8659,
-      roughness: 0.8,
-      metalness: 0.1,
-    });
-    const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
-    terrain.castShadow = true;
-    terrain.receiveShadow = true;
-    terrain.position.y = -20;
-    scene.add(terrain);
+    const cityGroup = new THREE.Group();
+    scene.add(cityGroup);
 
-    // Marker group
     const markerGroup = new THREE.Group();
     scene.add(markerGroup);
 
     sceneRef.current = scene;
     cameraRef.current = camera;
     rendererRef.current = renderer;
-    terrainRef.current = terrain;
+    cityGroupRef.current = cityGroup;
     markerGroupRef.current = markerGroup;
     raycasterRef.current = new THREE.Raycaster();
     mouseRef.current = new THREE.Vector2();
 
-    // Handle mouse click for raycasting
-    const onMouseClick = (event: MouseEvent) => {
-      const rect = renderer.domElement.getBoundingClientRect();
-      mouseRef.current.x = ((event.clientX - rect.left) / width) * 2 - 1;
-      mouseRef.current.y = -((event.clientY - rect.top) / height) * 2 + 1;
-
-      raycasterRef.current.setFromCamera(mouseRef.current, camera);
-      const intersects = raycasterRef.current.intersectObjects(markerGroup.children);
-
-      if (intersects.length > 0) {
-        const marker = intersects[0].object as any;
-        if (marker.activity) {
-          onSelectActivity(marker.activity);
-        }
-      }
-    };
-
-    renderer.domElement.addEventListener('click', onMouseClick);
-
-    // Camera controls
+    // Mouse interactions
     let isDragging = false;
-    let previousMousePosition = { x: 0, y: 0 };
-    const rotation = { x: 0, y: 0 };
+    let lastMouse = { x: 0, y: 0 };
 
-    const onMouseDown = (event: MouseEvent) => {
+    const onMouseDown = (e: MouseEvent) => {
       isDragging = true;
-      previousMousePosition = { x: event.clientX, y: event.clientY };
+      lastMouse = { x: e.clientX, y: e.clientY };
     };
 
-    const onMouseMove = (event: MouseEvent) => {
+    const onMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
 
-      const deltaX = event.clientX - previousMousePosition.x;
-      const deltaY = event.clientY - previousMousePosition.y;
+      const deltaX = e.clientX - lastMouse.x;
+      const deltaY = e.clientY - lastMouse.y;
 
-      rotation.y += deltaX * 0.01;
-      rotation.x += deltaY * 0.01;
+      // Pan camera
+      const panSpeed = 0.5;
+      panOffsetRef.current.x -= deltaX * panSpeed;
+      panOffsetRef.current.z += deltaY * panSpeed;
 
-      const distance = camera.position.length();
-      camera.position.x = distance * Math.sin(rotation.y) * Math.cos(rotation.x);
-      camera.position.y = distance * Math.sin(rotation.x) + 50;
-      camera.position.z = distance * Math.cos(rotation.y) * Math.cos(rotation.x);
-      camera.lookAt(0, 30, 0);
+      camera.position.x = 100 + panOffsetRef.current.x;
+      camera.position.z = 100 + panOffsetRef.current.z;
+      camera.lookAt(panOffsetRef.current.x, 0, panOffsetRef.current.z);
 
-      previousMousePosition = { x: event.clientX, y: event.clientY };
+      lastMouse = { x: e.clientX, y: e.clientY };
     };
 
     const onMouseUp = () => {
       isDragging = false;
     };
 
-    const onWheel = (event: WheelEvent) => {
-      event.preventDefault();
-      const distance = camera.position.length();
-      const newDistance = Math.max(50, Math.min(300, distance + event.deltaY * 0.1));
-      const ratio = newDistance / distance;
-      camera.position.multiplyScalar(ratio);
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      zoomRef.current = Math.max(
+        0.5,
+        Math.min(2, zoomRef.current + e.deltaY * -0.001),
+      );
+      camera.zoom = zoomRef.current;
+      camera.updateProjectionMatrix();
     };
 
-    renderer.domElement.addEventListener('mousedown', onMouseDown);
-    renderer.domElement.addEventListener('mousemove', onMouseMove);
-    renderer.domElement.addEventListener('mouseup', onMouseUp);
-    renderer.domElement.addEventListener('wheel', onWheel, { passive: false });
+    const onClick = (e: MouseEvent) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouseRef.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouseRef.current.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycasterRef.current.setFromCamera(mouseRef.current, camera);
+      const intersects = raycasterRef.current.intersectObjects(
+        markerGroup.children,
+        true,
+      );
+
+      if (intersects.length > 0) {
+        let obj = intersects[0].object;
+        while (obj.parent && !obj.userData.activity) {
+          obj = obj.parent;
+        }
+
+        const activity = obj.userData?.activity;
+        if (activity) {
+          if (selectedActivityRef.current?.id === activity.id) {
+            onViewActivityRef.current(activity);
+          } else {
+            onSelectActivityRef.current(activity);
+          }
+        }
+      }
+    };
+
+    renderer.domElement.addEventListener("mousedown", onMouseDown);
+    renderer.domElement.addEventListener("mousemove", onMouseMove);
+    renderer.domElement.addEventListener("mouseup", onMouseUp);
+    renderer.domElement.addEventListener("wheel", onWheel, { passive: false });
+    renderer.domElement.addEventListener("click", onClick);
 
     // Animation loop
     let animationId: number;
     const animate = () => {
       animationId = requestAnimationFrame(animate);
+
+      const t = performance.now() / 1000;
+
+      // Animate markers
+      markerGroup.children.forEach((obj: any) => {
+        const kind = obj?.userData?.kind;
+        if (!kind) return;
+
+        const phase = obj.userData.phase ?? 0;
+
+        if (kind === "activity" || kind === "user") {
+          obj.position.y = Math.sin(t * 1.5 + phase) * 1.2;
+        } else if (kind === "beam") {
+          obj.material.opacity = 0.15 + Math.sin(t * 2 + phase) * 0.08;
+        } else if (kind === "glow") {
+          obj.scale.setScalar(1 + Math.sin(t * 2.5 + phase) * 0.15);
+        } else if (kind === "userRing") {
+          obj.scale.setScalar(1 + Math.sin(t * 1.8) * 0.1);
+          obj.material.opacity = 0.4 + Math.sin(t * 1.8) * 0.15;
+        }
+      });
+
       renderer.render(scene, camera);
     };
     animate();
-    console.log('[Map3D] Animation loop started, rendering should begin now');
 
-    // Handle resize
+    // Resize handler
     const handleResize = () => {
-      const newWidth = container.clientWidth || width;
-      const newHeight = container.clientHeight || height;
-      camera.aspect = newWidth / newHeight;
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      const aspect = w / h;
+
+      camera.left = (frustumSize * aspect) / -2;
+      camera.right = (frustumSize * aspect) / 2;
+      camera.top = frustumSize / 2;
+      camera.bottom = frustumSize / -2;
       camera.updateProjectionMatrix();
-      renderer.setSize(newWidth, newHeight);
+      renderer.setSize(w, h);
     };
 
-    window.addEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
 
     return () => {
-      console.log('Cleaning up 3D scene');
       cancelAnimationFrame(animationId);
-      window.removeEventListener('resize', handleResize);
-      renderer.domElement.removeEventListener('click', onMouseClick);
-      renderer.domElement.removeEventListener('mousedown', onMouseDown);
-      renderer.domElement.removeEventListener('mousemove', onMouseMove);
-      renderer.domElement.removeEventListener('mouseup', onMouseUp);
-      renderer.domElement.removeEventListener('wheel', onWheel);
+      window.removeEventListener("resize", handleResize);
+      renderer.domElement.removeEventListener("mousedown", onMouseDown);
+      renderer.domElement.removeEventListener("mousemove", onMouseMove);
+      renderer.domElement.removeEventListener("mouseup", onMouseUp);
+      renderer.domElement.removeEventListener("wheel", onWheel);
+      renderer.domElement.removeEventListener("click", onClick);
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
       }
       renderer.dispose();
-      terrainGeometry.dispose();
-      terrainMaterial.dispose();
     };
   };
 
@@ -351,71 +551,29 @@ export const Map3D: React.FC<Map3DProps> = ({
     <div
       ref={containerRef}
       style={{
-        width: '100%',
-        height: '100%',
-        position: 'relative',
-        overflow: 'hidden',
-        backgroundColor: '#87ceeb',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        width: "100%",
+        height: "100%",
+        position: "relative",
+        overflow: "hidden",
+        backgroundColor: "#87ceeb",
+        cursor: isInitialized ? "grab" : "default",
       }}
     >
       {!isInitialized && (
         <div
           style={{
-            textAlign: 'center',
-            color: '#666',
-            fontSize: '16px',
-            fontFamily: 'sans-serif',
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            textAlign: "center",
+            color: "#666",
+            fontFamily: "Inter, sans-serif",
           }}
         >
-          <div>📍 Loading 3D Map...</div>
-          <div style={{ fontSize: '12px', marginTop: '8px', color: '#999' }}>
-            Container: {containerRef.current?.clientWidth || 0}x{containerRef.current?.clientHeight || 0}px
-          </div>
+          <div style={{ fontSize: "16px" }}>🏙️ Building city map...</div>
         </div>
       )}
     </div>
   );
 };
-
-function generateLowPolyTerrain(THREE: any, width: number, height: number, scale: number): any {
-  const geometry = new THREE.BufferGeometry();
-
-  const verticesArray: number[] = [];
-  const indicesArray: number[] = [];
-
-  const cols = Math.floor(width / 20);
-  const rows = Math.floor(height / 20);
-
-  // Generate vertices
-  for (let i = 0; i <= rows; i++) {
-    for (let j = 0; j <= cols; j++) {
-      const x = (j / cols) * width - width / 2;
-      const z = (i / rows) * height - height / 2;
-      const y = Math.random() * scale - scale / 2;
-
-      verticesArray.push(x, y, z);
-    }
-  }
-
-  // Generate indices
-  for (let i = 0; i < rows; i++) {
-    for (let j = 0; j < cols; j++) {
-      const a = i * (cols + 1) + j;
-      const b = a + cols + 1;
-      const c = a + 1;
-      const d = b + 1;
-
-      indicesArray.push(a, b, c);
-      indicesArray.push(c, b, d);
-    }
-  }
-
-  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(verticesArray), 3));
-  geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(indicesArray), 1));
-  geometry.computeVertexNormals();
-
-  return geometry;
-}

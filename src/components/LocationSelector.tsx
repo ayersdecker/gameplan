@@ -1,5 +1,14 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Modal, Keyboard } from 'react-native';
+import React, { useState, useRef } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  StyleSheet,
+  Modal,
+  Keyboard,
+} from "react-native";
 
 interface LocationSuggestion {
   id: string;
@@ -10,7 +19,11 @@ interface LocationSuggestion {
 }
 
 interface LocationSelectorProps {
-  onLocationSelect: (location: { latitude: number; longitude: number; address: string }) => void;
+  onLocationSelect: (location: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  }) => void;
   onMapOpen?: () => void;
   currentLocation?: { latitude: number; longitude: number } | null;
 }
@@ -20,11 +33,11 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
   onMapOpen,
   currentLocation,
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const searchAddresses = async (query: string) => {
     if (!query || query.length < 3) {
@@ -35,13 +48,13 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
     setLoading(true);
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5`
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5`,
       );
       const results = await response.json();
 
       const formatted: LocationSuggestion[] = results.map((item: any) => ({
         id: item.osm_id.toString(),
-        name: item.name || item.display_name.split(',')[0],
+        name: item.name || item.display_name.split(",")[0],
         latitude: parseFloat(item.lat),
         longitude: parseFloat(item.lon),
         address: item.display_name,
@@ -50,7 +63,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
       setSuggestions(formatted);
       setShowSuggestions(true);
     } catch (error) {
-      console.error('Error searching addresses:', error);
+      console.error("Error searching addresses:", error);
     } finally {
       setLoading(false);
     }
@@ -139,9 +152,9 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
               onLocationSelect({
                 latitude: currentLocation.latitude,
                 longitude: currentLocation.longitude,
-                address: 'Current Location',
+                address: "Current Location",
               });
-              setSearchQuery('Current Location');
+              setSearchQuery("Current Location");
               setShowSuggestions(false);
             }}
           >
@@ -159,36 +172,36 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
     marginBottom: 8,
-    fontFamily: 'Roboto',
+    fontFamily: "Inter_600SemiBold",
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 8,
   },
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    backgroundColor: '#f9f9f9',
-    color: '#333',
-    fontFamily: 'Roboto',
+    backgroundColor: "#f9f9f9",
+    color: "#333",
+    fontFamily: "Inter_400Regular",
   },
   loadingText: {
     fontSize: 16,
     marginLeft: 8,
   },
   suggestionsContainer: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 8,
     marginBottom: 8,
     maxHeight: 200,
@@ -196,22 +209,22 @@ const styles = StyleSheet.create({
   suggestionItem: {
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: "#f0f0f0",
   },
   suggestionName: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#007AFF',
+    fontWeight: "600",
+    color: "#007AFF",
     marginBottom: 4,
-    fontFamily: 'Roboto',
+    fontFamily: "Inter_600SemiBold",
   },
   suggestionAddress: {
     fontSize: 12,
-    color: '#666',
-    fontFamily: 'Roboto',
+    color: "#666",
+    fontFamily: "Inter_400Regular",
   },
   buttonRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   button: {
@@ -219,19 +232,19 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   mapButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: "#007AFF",
   },
   currentButton: {
-    backgroundColor: '#28A745',
+    backgroundColor: "#28A745",
   },
   buttonText: {
-    color: 'white',
-    fontWeight: '600',
+    color: "white",
+    fontWeight: "600",
     fontSize: 13,
-    fontFamily: 'Roboto',
+    fontFamily: "Inter_600SemiBold",
   },
 });

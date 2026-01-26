@@ -5,6 +5,11 @@ export interface User {
   photoURL?: string;
   interests: string[];
   badges: Badge[];
+  friends: string[];
+  friendRequests: {
+    sent: string[];
+    received: string[];
+  };
   createdAt: Date;
 }
 
@@ -13,7 +18,12 @@ export interface Activity {
   title: string;
   description: string;
   category: string;
-  location?: string;
+  location?: {
+    address?: string;
+    latitude: number;
+    longitude: number;
+  };
+  // Legacy support for old activities
   latitude?: number;
   longitude?: number;
   date: Date;
@@ -21,6 +31,7 @@ export interface Activity {
   creatorName: string;
   participants: string[];
   maxParticipants?: number;
+  isPublic?: boolean;
   createdAt: Date;
 }
 
@@ -42,9 +53,9 @@ export interface Badge {
   earnedAt: Date;
 }
 
-export type BadgeType = 
-  | 'first_activity'
-  | 'social_butterfly'
-  | 'organizer'
-  | 'consistent'
-  | 'early_adopter';
+export type BadgeType =
+  | "first_activity"
+  | "social_butterfly"
+  | "organizer"
+  | "consistent"
+  | "early_adopter";

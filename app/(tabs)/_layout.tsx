@@ -1,5 +1,5 @@
-import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Tabs } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function TabsLayout() {
   return (
@@ -7,28 +7,28 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopColor: '#007AFF',
+          backgroundColor: "#FFFFFF",
+          borderTopColor: "#007AFF",
           borderTopWidth: 2,
           paddingBottom: 8,
           paddingTop: 8,
           height: 70,
         },
-        tabBarActiveTintColor: '#007AFF',
-        tabBarInactiveTintColor: '#999',
+        tabBarActiveTintColor: "#007AFF",
+        tabBarInactiveTintColor: "#999",
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '600',
+          fontWeight: "600",
           marginBottom: 4,
-          textTransform: 'none',
-          fontFamily: 'Roboto',
+          textTransform: "none",
+          fontFamily: "Inter_600SemiBold",
         },
       }}
     >
       <Tabs.Screen
         name="home"
         options={{
-          title: 'Home',
+          title: "Home",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home" size={size} color={color} />
           ),
@@ -37,7 +37,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="activities"
         options={{
-          title: 'Activities',
+          title: "Activities",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="list" size={size} color={color} />
           ),
@@ -46,7 +46,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="map"
         options={{
-          title: 'Map',
+          title: "Map",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="map" size={size} color={color} />
           ),
@@ -55,7 +55,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: "Profile",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
           ),
