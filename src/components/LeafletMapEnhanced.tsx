@@ -198,15 +198,13 @@ const LeafletMapEnhanced: React.FC<LeafletMapProps> = ({
       },
     ).addTo(map);
 
-    // Add custom zoom control
-    L.control.zoom({ position: "bottomright" }).addTo(map);
-
     mapInstanceRef.current = map;
 
     // Add "locate me" button
-    const locateButton = L.control({ position: "topright" });
+    const locateButton = L.control({ position: "bottomright" });
     locateButton.onAdd = function () {
       const div = L.DomUtil.create("div", "leaflet-bar leaflet-control");
+      div.style.marginBottom = "80px"; // Position above the bottom navigation
       div.innerHTML = `
         <a href="#" style="
           width: 44px;
