@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,9 +7,9 @@ import {
   Image,
   ActivityIndicator,
   Alert,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAuth } from '../../src/hooks/useAuth';
+} from "react-native";
+import { useRouter } from "expo-router";
+import { useAuth } from "../../src/hooks/useAuth";
 
 export default function SignIn() {
   const [loading, setLoading] = useState(false);
@@ -20,9 +20,12 @@ export default function SignIn() {
     try {
       setLoading(true);
       await signInWithGoogle();
-      router.replace('/(tabs)/home');
+      router.replace("/(tabs)/home");
     } catch (error: any) {
-      Alert.alert('Sign In Error', error.message || 'Failed to sign in with Google');
+      Alert.alert(
+        "Sign In Error",
+        error.message || "Failed to sign in with Google",
+      );
     } finally {
       setLoading(false);
     }
@@ -31,9 +34,15 @@ export default function SignIn() {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.logo}>🎯</Text>
+        <Image
+          source={require("../../assets/logo.png")}
+          style={styles.logo}
+          resizeMode="contain"
+        />
         <Text style={styles.title}>GamePlan</Text>
-        <Text style={styles.subtitle}>Connect through shared activities and goals</Text>
+        <Text style={styles.subtitle}>
+          Connect through shared activities and goals
+        </Text>
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity
@@ -53,7 +62,8 @@ export default function SignIn() {
         </View>
 
         <Text style={styles.description}>
-          Join a community of individuals connecting through outdoor activities and shared goals.
+          Join a community of individuals connecting through outdoor activities
+          and shared goals.
         </Text>
       </View>
     </View>
@@ -63,64 +73,65 @@ export default function SignIn() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 24,
   },
   logo: {
-    fontSize: 80,
-    marginBottom: 16,
+    width: 150,
+    height: 150,
+    marginBottom: 24,
   },
   title: {
     fontSize: 36,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
     marginBottom: 48,
   },
   buttonContainer: {
-    width: '100%',
+    width: "100%",
     maxWidth: 320,
   },
   googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#4285F4',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#4285F4",
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 8,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
   googleIcon: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
+    color: "#fff",
     marginRight: 12,
   },
   googleButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   description: {
     marginTop: 48,
     fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
+    color: "#999",
+    textAlign: "center",
     maxWidth: 280,
   },
 });
