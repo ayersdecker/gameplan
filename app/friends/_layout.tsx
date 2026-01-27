@@ -7,8 +7,8 @@ export default function FriendsLayout() {
         headerShown: false,
       }}
     >
-      <Stack.Screen name="index" />
-      <Stack.Screen name="search" />
+      <Stack.Screen name="index" options={{ title: "Friends" }} />
+      <Stack.Screen name="search" options={{ title: "Find Friends" }} />
     </Stack>
   );
 }

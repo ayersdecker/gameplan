@@ -329,6 +329,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: "#333",
+    textTransform: "capitalize",
   },
   addButton: {
     fontSize: 16,
