@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Modal,
   Keyboard,
+  ActivityIndicator,
 } from "react-native";
 
 interface LocationSuggestion {
@@ -26,18 +27,30 @@ interface LocationSelectorProps {
   }) => void;
   onMapOpen?: () => void;
   currentLocation?: { latitude: number; longitude: number } | null;
+  onGetCurrentLocation?: () => Promise<void>;
+  value?: string;
 }
 
 export const LocationSelector: React.FC<LocationSelectorProps> = ({
   onLocationSelect,
   onMapOpen,
   currentLocation,
+  onGetCurrentLocation,
+  value,
 }) => {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(value || "");
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [gettingCurrentLocation, setGettingCurrentLocation] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Update search query when value prop changes
+  React.useEffect(() => {
+    if (value !== undefined) {
+      setSearchQuery(value);
+    }
+  }, [value]);
 
   const searchAddresses = async (query: string) => {
     if (!query || query.length < 3) {
@@ -148,17 +161,26 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
         {currentLocation && (
           <TouchableOpacity
             style={[styles.button, styles.currentButton]}
-            onPress={() => {
-              onLocationSelect({
-                latitude: currentLocation.latitude,
-                longitude: currentLocation.longitude,
-                address: "Current Location",
-              });
-              setSearchQuery("Current Location");
-              setShowSuggestions(false);
+            onPress={async () => {
+              if (onGetCurrentLocation) {
+                setGettingCurrentLocation(true);
+                try {
+                  await onGetCurrentLocation();
+                  setShowSuggestions(false);
+                } catch (error) {
+                  console.error("Error getting current location:", error);
+                } finally {
+                  setGettingCurrentLocation(false);
+                }
+              }
             }}
+            disabled={gettingCurrentLocation}
           >
-            <Text style={styles.buttonText}>📍 Current</Text>
+            {gettingCurrentLocation ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>📍 Current</Text>
+            )}
           </TouchableOpacity>
         )}
       </View>

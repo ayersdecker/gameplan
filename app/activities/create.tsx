@@ -29,6 +29,72 @@ const CATEGORIES = [
   "Other",
 ];
 
+const SUBCATEGORIES: { [key: string]: string[] } = {
+  Outdoor: [
+    "Hiking",
+    "Camping",
+    "Kayaking",
+    "Rock Climbing",
+    "Fishing",
+    "Biking",
+    "Stargazing",
+  ],
+  Sports: [
+    "Soccer",
+    "Basketball",
+    "Tennis",
+    "Volleyball",
+    "Baseball",
+    "Football",
+    "Airsoft",
+    "Paintball",
+    "Golf",
+    "Skateboarding",
+  ],
+  Fitness: [
+    "Running",
+    "Yoga",
+    "CrossFit",
+    "Gym",
+    "Swimming",
+    "Cycling",
+    "Pilates",
+    "Dance",
+    "Boxing",
+    "Martial Arts",
+  ],
+  Social: [
+    "Coffee",
+    "Dinner",
+    "Board Games",
+    "Karaoke",
+    "Movie Night",
+    "Picnic",
+    "Party",
+    "Networking",
+  ],
+  Learning: [
+    "Book Club",
+    "Language Exchange",
+    "Coding",
+    "Cooking Class",
+    "Workshop",
+    "Study Group",
+    "Skill Share",
+  ],
+  Arts: [
+    "Painting",
+    "Music Jam",
+    "Theater",
+    "Dance",
+    "Photography",
+    "Crafts",
+    "Writing",
+    "Film",
+  ],
+  Other: ["Volunteer", "Meetup", "Travel", "Gaming", "Pet Playdate", "Other"],
+};
+
 export default function CreateActivity() {
   const { user } = useAuth();
   const { getCurrentLocation } = useLocation();
@@ -36,6 +102,7 @@ export default function CreateActivity() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("Outdoor");
+  const [subcategory, setSubcategory] = useState("");
   const [location, setLocation] = useState("");
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
@@ -50,6 +117,35 @@ export default function CreateActivity() {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const [showSubcategorySuggestions, setShowSubcategorySuggestions] =
+    useState(false);
+
+  // Find category from subcategory
+  const findCategoryForSubcategory = (subcat: string): string | null => {
+    for (const [cat, subcats] of Object.entries(SUBCATEGORIES)) {
+      if (subcats.some((s) => s.toLowerCase() === subcat.toLowerCase())) {
+        return cat;
+      }
+    }
+    return null;
+  };
+
+  // Filter subcategory suggestions based on input across all categories
+  const getAllSubcategories = () => {
+    const allSubs: Array<{ name: string; category: string }> = [];
+    Object.entries(SUBCATEGORIES).forEach(([cat, subcats]) => {
+      subcats.forEach((sub) => {
+        allSubs.push({ name: sub, category: cat });
+      });
+    });
+    return allSubs;
+  };
+
+  const filteredSubcategories = subcategory
+    ? getAllSubcategories().filter((sub) =>
+        sub.name.toLowerCase().includes(subcategory.toLowerCase()),
+      )
+    : getAllSubcategories();
 
   // Fetch user's current location on mount
   useEffect(() => {
@@ -83,10 +179,10 @@ export default function CreateActivity() {
       date,
     });
 
-    if (!title.trim() || !description.trim() || !date) {
+    if (!title.trim() || !description.trim() || !date || !subcategory.trim()) {
       Alert.alert(
         "Error",
-        "Please fill in all required fields:\n- Title\n- Description\n- Date",
+        "Please fill in all required fields:\n- Title\n- Description\n- Activity Type\n- Date",
       );
       return;
     }
@@ -120,10 +216,12 @@ export default function CreateActivity() {
         title: title.trim(),
         description: description.trim(),
         category,
+        subcategory: subcategory || null,
         // Default to public so events are visible platform-wide.
         // Existing events without this field are treated as public in readers.
         isPublic: true,
         date: activityDate,
+        createdBy: user.id,
         creatorId: user.id,
         creatorName: user.displayName,
         participants: [user.id],
@@ -168,9 +266,10 @@ export default function CreateActivity() {
       if (locationData) {
         setLatitude(locationData.latitude);
         setLongitude(locationData.longitude);
-        if (locationData.address) {
-          setLocation(locationData.address);
-        }
+        const address =
+          locationData.address ||
+          `${locationData.latitude.toFixed(4)}, ${locationData.longitude.toFixed(4)}`;
+        setLocation(address);
       }
     } catch (error) {
       Alert.alert("Error", `Failed to get location: ${error}`);
@@ -222,32 +321,57 @@ export default function CreateActivity() {
             numberOfLines={4}
           />
 
-          <Text style={styles.label}>Category</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.categoryScroll}
-          >
-            {CATEGORIES.map((cat) => (
-              <TouchableOpacity
-                key={cat}
-                style={[
-                  styles.categoryChip,
-                  category === cat && styles.categoryChipSelected,
-                ]}
-                onPress={() => setCategory(cat)}
+          <Text style={styles.label}>Activity Type *</Text>
+          <TextInput
+            style={styles.input}
+            value={subcategory}
+            onChangeText={(text) => {
+              setSubcategory(text);
+              setShowSubcategorySuggestions(text.length > 0);
+              // Auto-detect category from subcategory
+              const detectedCategory = findCategoryForSubcategory(text);
+              if (detectedCategory) {
+                setCategory(detectedCategory);
+              }
+            }}
+            onFocus={() => setShowSubcategorySuggestions(true)}
+            onBlur={() =>
+              setTimeout(() => setShowSubcategorySuggestions(false), 200)
+            }
+            placeholder="Type activity type (e.g., Kayaking, Soccer, Yoga)"
+          />
+          {category && subcategory && (
+            <Text style={styles.categoryBadgeText}>Category: {category}</Text>
+          )}
+          {showSubcategorySuggestions && filteredSubcategories.length > 0 && (
+            <View style={styles.suggestionsContainer}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.suggestionsScroll}
               >
-                <Text
-                  style={[
-                    styles.categoryText,
-                    category === cat && styles.categoryTextSelected,
-                  ]}
-                >
-                  {cat}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+                {filteredSubcategories.slice(0, 10).map((subcat, index) => (
+                  <TouchableOpacity
+                    key={`${subcat.category}-${subcat.name}-${index}`}
+                    style={styles.suggestionChip}
+                    onPress={() => {
+                      setSubcategory(subcat.name);
+                      setCategory(subcat.category);
+                      setShowSubcategorySuggestions(false);
+                    }}
+                  >
+                    <Text style={styles.suggestionText}>
+                      {subcat.name}
+                      <Text style={styles.suggestionCategory}>
+                        {" "}
+                        • {subcat.category}
+                      </Text>
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           <LocationSelector
             onLocationSelect={(selectedLocation) => {
@@ -257,6 +381,8 @@ export default function CreateActivity() {
             }}
             onMapOpen={() => setShowMapPicker(true)}
             currentLocation={userCurrentLocation}
+            onGetCurrentLocation={handleGetLocation}
+            value={location}
           />
           {latitude !== null && longitude !== null && (
             <Text style={styles.coordsText}>
@@ -450,6 +576,39 @@ const styles = StyleSheet.create({
   categoryTextSelected: {
     color: "#fff",
     fontWeight: "600",
+  },
+  suggestionsContainer: {
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  suggestionsScroll: {
+    maxHeight: 40,
+  },
+  suggestionChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 16,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  suggestionText: {
+    fontSize: 12,
+    color: "#007AFF",
+    fontWeight: "500",
+  },
+  suggestionCategory: {
+    fontSize: 10,
+    color: "#999",
+    fontWeight: "400",
+  },
+  categoryBadgeText: {
+    fontSize: 12,
+    color: "#007AFF",
+    fontWeight: "600",
+    marginTop: 4,
+    fontStyle: "italic",
   },
   datePickerButton: {
     backgroundColor: "#fff",

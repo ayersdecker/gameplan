@@ -10,6 +10,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -41,6 +42,10 @@ export default function ActivityDetail() {
   const [messageText, setMessageText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [participants, setParticipants] = useState<any[]>([]);
+  const [showParticipants, setShowParticipants] = useState(false);
+  const [editingMessage, setEditingMessage] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
 
   useEffect(() => {
     if (!id) return;
@@ -86,6 +91,26 @@ export default function ActivityDetail() {
       messagesUnsubscribe();
     };
   }, [id]);
+
+  const loadParticipants = async () => {
+    if (!activity) return;
+
+    try {
+      const participantsData = [];
+      for (const userId of activity.participants) {
+        const userDoc = await getDoc(doc(db, "users", userId));
+        if (userDoc.exists()) {
+          participantsData.push({
+            id: userDoc.id,
+            ...userDoc.data(),
+          });
+        }
+      }
+      setParticipants(participantsData);
+    } catch (error) {
+      console.error("Error loading participants:", error);
+    }
+  };
 
   const loadActivity = async () => {
     if (!id) return;
@@ -197,8 +222,87 @@ export default function ActivityDetail() {
     }
   };
 
+  const handleSendFriendRequest = async (
+    friendId: string,
+    friendName: string,
+  ) => {
+    if (!user) return;
+
+    try {
+      await updateDoc(doc(db, "users", user.id), {
+        "friendRequests.sent": arrayUnion(friendId),
+      });
+
+      await updateDoc(doc(db, "users", friendId), {
+        "friendRequests.received": arrayUnion(user.id),
+      });
+
+      if (Platform.OS === "web") {
+        window.alert(`Friend request sent to ${friendName}!`);
+      } else {
+        Alert.alert("Success", `Friend request sent to ${friendName}!`);
+      }
+    } catch (error) {
+      console.error("Error sending friend request:", error);
+      if (Platform.OS === "web") {
+        window.alert("Failed to send friend request");
+      } else {
+        Alert.alert("Error", "Failed to send friend request");
+      }
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!id) return;
+
+    try {
+      await deleteDoc(doc(db, "activities", id, "messages", messageId));
+    } catch (error) {
+      console.error("Error deleting message:", error);
+    }
+  };
+
+  const handleEditMessage = async (messageId: string) => {
+    if (!id || !editText.trim()) return;
+
+    try {
+      await updateDoc(doc(db, "activities", id, "messages", messageId), {
+        text: editText.trim(),
+        edited: true,
+      });
+      setEditingMessage(null);
+      setEditText("");
+    } catch (error) {
+      console.error("Error editing message:", error);
+    }
+  };
+
   const handleAddToCalendar = async () => {
-    if (!activity) return;
+    if (!activity || !user || !id) return;
+
+    // First, join the activity if not already joined
+    if (!activity.participants.includes(user.id)) {
+      try {
+        await updateDoc(doc(db, "activities", id), {
+          participants: arrayUnion(user.id),
+        });
+
+        // Award badge for joining first activity
+        await awardBadge(user.id, "first_activity");
+
+        await loadActivity();
+      } catch (error) {
+        console.error("Error joining activity:", error);
+        if (Platform.OS === "web") {
+          window.alert("Failed to join activity");
+        } else {
+          Alert.alert("Error", "Failed to join activity");
+        }
+        return;
+      }
+    }
+
+    // Then add to calendar
     await addActivityToCalendar(activity);
   };
 
@@ -256,11 +360,11 @@ export default function ActivityDetail() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backButton}>← Back</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleAddToCalendar}>
-          <Text style={styles.calendarButton}>📅 Add to Calendar</Text>
+        <TouchableOpacity
+          onPress={handleAddToCalendar}
+          style={styles.calendarButtonContainer}
+        >
+          <Text style={styles.calendarButton}>Add to Calendar</Text>
         </TouchableOpacity>
       </View>
 
@@ -268,7 +372,14 @@ export default function ActivityDetail() {
         <View style={styles.activitySection}>
           <View style={styles.activityHeader}>
             <Text style={styles.activityTitle}>{activity.title}</Text>
-            <Text style={styles.activityCategory}>{activity.category}</Text>
+            <View style={styles.categoryContainer}>
+              <Text style={styles.activityCategory}>{activity.category}</Text>
+              {activity.subcategory && (
+                <Text style={styles.subcategoryText}>
+                  {activity.subcategory}
+                </Text>
+              )}
+            </View>
           </View>
           <Text style={styles.activityDescription}>{activity.description}</Text>
 
@@ -293,6 +404,16 @@ export default function ActivityDetail() {
             </Text>
           </View>
 
+          <TouchableOpacity
+            style={styles.viewParticipantsButton}
+            onPress={() => {
+              loadParticipants();
+              setShowParticipants(true);
+            }}
+          >
+            <Text style={styles.viewParticipantsText}>View Participants</Text>
+          </TouchableOpacity>
+
           <View style={styles.actionButtons}>
             {!isParticipant ? (
               <TouchableOpacity style={styles.joinButton} onPress={handleJoin}>
@@ -316,9 +437,7 @@ export default function ActivityDetail() {
                   style={styles.deleteButton}
                   onPress={handleDeleteActivity}
                 >
-                  <Text style={styles.deleteButtonText}>
-                    🗑️ Delete Activity
-                  </Text>
+                  <Text style={styles.deleteButtonText}>Delete Activity</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -340,30 +459,98 @@ export default function ActivityDetail() {
                   message.userId === user?.id && styles.ownMessage,
                 ]}
               >
-                <Text
-                  style={[
-                    styles.messageSender,
-                    message.userId === user?.id && styles.ownMessageSender,
-                  ]}
-                >
-                  {message.userName}
-                </Text>
-                <Text
-                  style={[
-                    styles.messageText,
-                    message.userId === user?.id && styles.ownMessageText,
-                  ]}
-                >
-                  {message.text}
-                </Text>
-                <Text
-                  style={[
-                    styles.messageTime,
-                    message.userId === user?.id && styles.ownMessageTime,
-                  ]}
-                >
-                  {message.createdAt.toLocaleTimeString()}
-                </Text>
+                <View style={styles.messageHeader}>
+                  <Text
+                    style={[
+                      styles.messageSender,
+                      message.userId === user?.id && styles.ownMessageSender,
+                    ]}
+                  >
+                    {message.userName}
+                  </Text>
+                  {message.userId === user?.id && (
+                    <View style={styles.messageActions}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setEditingMessage(message.id);
+                          setEditText(message.text);
+                        }}
+                        style={styles.messageActionButton}
+                      >
+                        <Text
+                          style={[
+                            styles.messageActionText,
+                            message.userId === user?.id &&
+                              styles.ownMessageActionText,
+                          ]}
+                        >
+                          Edit
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => handleDeleteMessage(message.id)}
+                        style={styles.messageActionButton}
+                      >
+                        <Text
+                          style={[
+                            styles.messageActionText,
+                            message.userId === user?.id &&
+                              styles.ownMessageActionText,
+                          ]}
+                        >
+                          Delete
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+                {editingMessage === message.id ? (
+                  <View style={styles.editContainer}>
+                    <TextInput
+                      style={styles.editInput}
+                      value={editText}
+                      onChangeText={setEditText}
+                      multiline
+                    />
+                    <View style={styles.editActions}>
+                      <TouchableOpacity
+                        onPress={() => handleEditMessage(message.id)}
+                        style={styles.editSaveButton}
+                      >
+                        <Text style={styles.editSaveText}>Save</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setEditingMessage(null);
+                          setEditText("");
+                        }}
+                        style={styles.editCancelButton}
+                      >
+                        <Text style={styles.editCancelText}>Cancel</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <>
+                    <Text
+                      style={[
+                        styles.messageText,
+                        message.userId === user?.id && styles.ownMessageText,
+                      ]}
+                    >
+                      {message.text}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.messageTime,
+                        message.userId === user?.id && styles.ownMessageTime,
+                      ]}
+                    >
+                      {message.createdAt.toLocaleTimeString()}
+                      {message.edited && " (edited)"}
+                    </Text>
+                  </>
+                )}
               </View>
             ))
           )}
@@ -389,6 +576,62 @@ export default function ActivityDetail() {
           >
             <Text style={styles.sendButtonText}>Send</Text>
           </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Participants Modal */}
+      {showParticipants && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Participants</Text>
+              <TouchableOpacity onPress={() => setShowParticipants(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.participantsList}>
+              {participants.map((participant) => {
+                const isFriend = user?.friends?.includes(participant.id);
+                const requestSent = user?.friendRequests?.sent?.includes(
+                  participant.id,
+                );
+                const isCurrentUser = user?.id === participant.id;
+
+                return (
+                  <View key={participant.id} style={styles.participantItem}>
+                    <View style={styles.participantInfo}>
+                      <Text style={styles.participantName}>
+                        {participant.displayName}
+                        {isCurrentUser && " (You)"}
+                      </Text>
+                      <Text style={styles.participantEmail}>
+                        {participant.email}
+                      </Text>
+                    </View>
+                    {!isCurrentUser && !isFriend && !requestSent && (
+                      <TouchableOpacity
+                        style={styles.addFriendButton}
+                        onPress={() =>
+                          handleSendFriendRequest(
+                            participant.id,
+                            participant.displayName,
+                          )
+                        }
+                      >
+                        <Text style={styles.addFriendText}>Add Friend</Text>
+                      </TouchableOpacity>
+                    )}
+                    {requestSent && (
+                      <Text style={styles.requestSentText}>Request Sent</Text>
+                    )}
+                    {isFriend && (
+                      <Text style={styles.friendBadge}>✓ Friends</Text>
+                    )}
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
         </View>
       )}
     </KeyboardAvoidingView>
@@ -422,7 +665,7 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     alignItems: "center",
     backgroundColor: "#fff",
     padding: 16,
@@ -430,9 +673,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
   },
-  backButton: {
-    fontSize: 16,
-    color: "#007AFF",
+  calendarButtonContainer: {
+    flexDirection: "row",
   },
   calendarButton: {
     fontSize: 14,
@@ -449,8 +691,12 @@ const styles = StyleSheet.create({
   activityHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     marginBottom: 12,
+  },
+  categoryContainer: {
+    alignItems: "flex-end",
+    gap: 4,
   },
   activityTitle: {
     fontSize: 24,
@@ -466,6 +712,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
+  },
+  subcategoryText: {
+    fontSize: 10,
+    color: "#666",
+    fontWeight: "500",
   },
   activityDescription: {
     fontSize: 16,
@@ -615,6 +866,155 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     color: "#fff",
     fontSize: 14,
+    fontWeight: "600",
+  },
+  viewParticipantsButton: {
+    backgroundColor: "#007AFF",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 12,
+  },
+  viewParticipantsText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  messageHeader: {
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    alignItems: "center",
+    marginBottom: 4,
+    gap: 12,
+  },
+  messageActions: {
+    flexDirection: "row",
+    gap: 4,
+    marginLeft: "auto",
+  },
+  messageActionButton: {
+    padding: 4,
+  },
+  messageActionText: {
+    fontSize: 11,
+    color: "#000",
+  },
+  ownMessageActionText: {
+    color: "#fff",
+  },
+  editContainer: {
+    marginTop: 8,
+  },
+  editInput: {
+    backgroundColor: "#f0f0f0",
+    borderRadius: 8,
+    padding: 8,
+    fontSize: 14,
+    minHeight: 60,
+    marginBottom: 8,
+  },
+  editActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  editSaveButton: {
+    backgroundColor: "#007AFF",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  editSaveText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  editCancelButton: {
+    backgroundColor: "#ccc",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  editCancelText: {
+    color: "#333",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  modalOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    width: "90%",
+    maxHeight: "80%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  modalClose: {
+    fontSize: 24,
+    color: "#666",
+  },
+  participantsList: {
+    maxHeight: 400,
+  },
+  participantItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+  },
+  participantInfo: {
+    flex: 1,
+  },
+  participantName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 4,
+  },
+  participantEmail: {
+    fontSize: 14,
+    color: "#666",
+  },
+  addFriendButton: {
+    backgroundColor: "#007AFF",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  addFriendText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  requestSentText: {
+    fontSize: 12,
+    color: "#999",
+    fontStyle: "italic",
+  },
+  friendBadge: {
+    fontSize: 12,
+    color: "#34C759",
     fontWeight: "600",
   },
 });

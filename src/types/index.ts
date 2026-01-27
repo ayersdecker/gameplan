@@ -18,6 +18,7 @@ export interface Activity {
   title: string;
   description: string;
   category: string;
+  subcategory?: string;
   location?: {
     address?: string;
     latitude: number;
@@ -43,6 +44,7 @@ export interface Message {
   userPhoto?: string;
   text: string;
   createdAt: Date;
+  edited?: boolean;
 }
 
 export interface Badge {

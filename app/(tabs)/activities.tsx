@@ -21,6 +21,21 @@ import { db } from "../../src/services/firebase";
 import { useAuth } from "../../src/hooks/useAuth";
 import { Activity } from "../../src/types";
 
+const getCategoryColor = (category: string) => {
+  const colors: { [key: string]: string } = {
+    sports: "#FF6B6B",
+    music: "#4ECDC4",
+    food: "#FFE66D",
+    outdoor: "#95E1D3",
+    gaming: "#A8E6CF",
+    social: "#FF8B94",
+    fitness: "#F38181",
+    education: "#AA96DA",
+    default: "#007AFF",
+  };
+  return colors[category.toLowerCase()] || colors.default;
+};
+
 export default function Activities() {
   const { user } = useAuth();
   const router = useRouter();
@@ -88,7 +103,9 @@ export default function Activities() {
     (activity) =>
       activity.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       activity.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      activity.category.toLowerCase().includes(searchQuery.toLowerCase()),
+      activity.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (activity.subcategory &&
+        activity.subcategory.toLowerCase().includes(searchQuery.toLowerCase())),
   );
 
   return (
@@ -186,29 +203,54 @@ export default function Activities() {
               style={styles.activityCard}
               onPress={() => router.push(`/activities/${activity.id}`)}
             >
-              <View style={styles.activityHeader}>
-                <Text style={styles.activityTitle}>{activity.title}</Text>
-                <Text style={styles.activityCategory}>{activity.category}</Text>
+              <View style={styles.cardTop}>
+                <View style={styles.activityHeader}>
+                  <Text style={styles.activityTitle} numberOfLines={1}>
+                    {activity.title}
+                  </Text>
+                  <View style={styles.categoryContainer}>
+                    <View
+                      style={[
+                        styles.categoryBadge,
+                        {
+                          backgroundColor: getCategoryColor(activity.category),
+                        },
+                      ]}
+                    >
+                      <Text style={styles.activityCategory}>
+                        {activity.category}
+                      </Text>
+                    </View>
+                    {activity.subcategory && (
+                      <Text style={styles.subcategoryText}>
+                        {activity.subcategory}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+                <Text style={styles.activityDescription} numberOfLines={2}>
+                  {activity.description}
+                </Text>
               </View>
-              <Text style={styles.activityDescription} numberOfLines={2}>
-                {activity.description}
-              </Text>
-              <View style={styles.activityFooter}>
-                <Text style={styles.activityDate}>
-                  📅 {activity.date.toLocaleDateString()}
-                </Text>
-                <Text style={styles.activityParticipants}>
-                  👥 {activity.participants.length}
-                  {activity.maxParticipants
-                    ? `/${activity.maxParticipants}`
-                    : ""}
-                </Text>
+              <View style={styles.cardBottom}>
+                {activity.location?.address && (
+                  <Text style={styles.activityLocation} numberOfLines={1}>
+                    {activity.location.address}
+                  </Text>
+                )}
+                <View style={styles.activityFooter}>
+                  <Text style={styles.activityDate}>
+                    {activity.date.toLocaleDateString()}
+                  </Text>
+                  <Text style={styles.activityParticipants}>
+                    {activity.participants.length}
+                    {activity.maxParticipants
+                      ? `/${activity.maxParticipants}`
+                      : ""}{" "}
+                    joined
+                  </Text>
+                </View>
               </View>
-              {activity.location?.address && (
-                <Text style={styles.activityLocation}>
-                  📍 {activity.location.address}
-                </Text>
-              )}
             </TouchableOpacity>
           ))
         )}
@@ -309,19 +351,36 @@ const styles = StyleSheet.create({
   activityCard: {
     backgroundColor: "#fff",
     borderRadius: 12,
-    padding: 16,
+    padding: 0,
     marginBottom: 12,
     elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
+    overflow: "hidden",
+  },
+  cardTop: {
+    padding: 16,
+    paddingBottom: 12,
+  },
+  cardBottom: {
+    padding: 16,
+    paddingTop: 8,
+    backgroundColor: "#f9f9f9",
+    borderTopWidth: 1,
+    borderTopColor: "#f0f0f0",
   },
   activityHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     marginBottom: 8,
+    gap: 12,
+  },
+  categoryContainer: {
+    alignItems: "flex-end",
+    gap: 4,
   },
   activityTitle: {
     fontSize: 18,
@@ -329,35 +388,46 @@ const styles = StyleSheet.create({
     color: "#333",
     flex: 1,
   },
+  categoryBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+  },
   activityCategory: {
-    fontSize: 12,
-    color: "#007AFF",
-    fontWeight: "600",
-    backgroundColor: "#E3F2FD",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    fontSize: 11,
+    color: "#fff",
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  subcategoryText: {
+    fontSize: 10,
+    color: "#666",
+    fontWeight: "500",
   },
   activityDescription: {
     fontSize: 14,
     color: "#666",
-    marginBottom: 12,
+    lineHeight: 20,
   },
   activityFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 4,
+    alignItems: "center",
+    marginTop: 8,
   },
   activityDate: {
-    fontSize: 12,
-    color: "#999",
+    fontSize: 13,
+    color: "#666",
+    fontWeight: "500",
   },
   activityParticipants: {
-    fontSize: 12,
-    color: "#999",
+    fontSize: 13,
+    color: "#007AFF",
+    fontWeight: "600",
   },
   activityLocation: {
     fontSize: 12,
     color: "#999",
+    marginBottom: 4,
   },
 });

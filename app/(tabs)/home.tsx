@@ -17,11 +17,14 @@ export default function Home() {
   const { user } = useAuth();
   const router = useRouter();
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [suggestedActivity, setSuggestedActivity] = useState<Activity | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadActivities();
-  }, []);
+  }, [user]);
 
   const loadActivities = async () => {
     try {
@@ -44,6 +47,30 @@ export default function Home() {
         })
         .filter((a) => a.isPublic !== false) as Activity[];
       setActivities(activitiesData);
+
+      // Find a suggested activity
+      if (user) {
+        // Get categories user is already in
+        const userCategories = activitiesData
+          .filter((a) => a.participants.includes(user.id))
+          .map((a) => a.category);
+
+        // Find activities user hasn't joined
+        const notJoined = activitiesData.filter(
+          (a) => !a.participants.includes(user.id),
+        );
+
+        // Prefer activities of different categories
+        const differentCategory = notJoined.filter(
+          (a) => !userCategories.includes(a.category),
+        );
+
+        // Pick the first different category activity, or any activity not joined
+        const suggestion =
+          differentCategory.length > 0 ? differentCategory[0] : notJoined[0];
+
+        setSuggestedActivity(suggestion || null);
+      }
     } catch (error) {
       console.error("Error loading activities:", error);
     } finally {
@@ -55,12 +82,52 @@ export default function Home() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.welcomeText}>
-          Welcome back, {user?.displayName}! 👋
+          Welcome back, {user?.displayName}!
         </Text>
         <Text style={styles.subtitle}>Ready to join an activity?</Text>
       </View>
 
-      <ScrollView style={styles.content}>
+      <View style={styles.content}>
+        {suggestedActivity && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Suggested For You</Text>
+            <TouchableOpacity
+              style={styles.suggestedCard}
+              onPress={() => router.push(`/activities/${suggestedActivity.id}`)}
+            >
+              <View style={styles.suggestedBadge}>
+                <Text style={styles.suggestedBadgeText}>NEW</Text>
+              </View>
+              <View style={styles.activityHeader}>
+                <Text style={styles.activityTitle}>
+                  {suggestedActivity.title}
+                </Text>
+                <View style={styles.categoryContainer}>
+                  <Text style={styles.activityCategory}>
+                    {suggestedActivity.category}
+                  </Text>
+                  {suggestedActivity.subcategory && (
+                    <Text style={styles.subcategoryText}>
+                      {suggestedActivity.subcategory}
+                    </Text>
+                  )}
+                </View>
+              </View>
+              <Text style={styles.activityDescription} numberOfLines={1}>
+                {suggestedActivity.description}
+              </Text>
+              <View style={styles.activityFooter}>
+                <Text style={styles.activityDate}>
+                  📅 {suggestedActivity.date.toLocaleDateString()}
+                </Text>
+                <Text style={styles.activityParticipants}>
+                  👥 {suggestedActivity.participants.length} joined
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Upcoming Activities</Text>
 
@@ -84,7 +151,7 @@ export default function Home() {
               </TouchableOpacity>
             </View>
           ) : (
-            activities.map((activity) => (
+            activities.slice(0, 2).map((activity) => (
               <TouchableOpacity
                 key={activity.id}
                 style={styles.activityCard}
@@ -92,11 +159,18 @@ export default function Home() {
               >
                 <View style={styles.activityHeader}>
                   <Text style={styles.activityTitle}>{activity.title}</Text>
-                  <Text style={styles.activityCategory}>
-                    {activity.category}
-                  </Text>
+                  <View style={styles.categoryContainer}>
+                    <Text style={styles.activityCategory}>
+                      {activity.category}
+                    </Text>
+                    {activity.subcategory && (
+                      <Text style={styles.subcategoryText}>
+                        {activity.subcategory}
+                      </Text>
+                    )}
+                  </View>
                 </View>
-                <Text style={styles.activityDescription} numberOfLines={2}>
+                <Text style={styles.activityDescription} numberOfLines={1}>
                   {activity.description}
                 </Text>
                 <View style={styles.activityFooter}>
@@ -127,7 +201,7 @@ export default function Home() {
             </View>
           </View>
         </View>
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -139,32 +213,32 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: "#fff",
-    padding: 24,
-    paddingTop: 60,
+    padding: 16,
+    paddingTop: 50,
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
   },
   welcomeText: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "bold",
     color: "#333",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#666",
   },
   content: {
     flex: 1,
   },
   section: {
-    padding: 16,
+    padding: 12,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: "bold",
     color: "#333",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   loader: {
     marginTop: 32,
@@ -199,40 +273,77 @@ const styles = StyleSheet.create({
   },
   activityCard: {
     backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
     elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
+  suggestedCard: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    elevation: 3,
+    shadowColor: "#007AFF",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    borderWidth: 2,
+    borderColor: "#007AFF",
+    position: "relative",
+  },
+  suggestedBadge: {
+    position: "absolute",
+    top: -8,
+    right: 16,
+    backgroundColor: "#007AFF",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  suggestedBadgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "bold",
+  },
   activityHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
+    alignItems: "flex-start",
+    marginBottom: 6,
+  },
+  categoryContainer: {
+    alignItems: "flex-end",
+    gap: 2,
   },
   activityTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
     color: "#333",
     flex: 1,
   },
   activityCategory: {
-    fontSize: 12,
+    fontSize: 10,
     color: "#007AFF",
     fontWeight: "600",
     backgroundColor: "#E3F2FD",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: 4,
   },
-  activityDescription: {
-    fontSize: 14,
+  subcategoryText: {
+    fontSize: 9,
     color: "#666",
-    marginBottom: 12,
+    fontWeight: "500",
+  },
+  activityDescription: {
+    fontSize: 13,
+    color: "#666",
+    marginBottom: 6,
   },
   activityFooter: {
     flexDirection: "row",
@@ -253,8 +364,8 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
+    borderRadius: 8,
+    padding: 12,
     alignItems: "center",
     elevation: 2,
     shadowColor: "#000",
@@ -263,13 +374,13 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
   },
   statValue: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: "bold",
     color: "#007AFF",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   statLabel: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#666",
   },
 });
