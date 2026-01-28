@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
-import { TouchableOpacity, Text, StyleSheet, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAuth } from '@/src/hooks/useAuth';
-import { createConversation, findConversation } from '@/src/services/messaging';
+import React, { useState } from "react";
+import { TouchableOpacity, Text, StyleSheet, Alert } from "react-native";
+import { useRouter } from "expo-router";
+import { useAuth } from "../hooks/useAuth";
+import { createConversation, findConversation } from "../services/messaging";
 
 interface Props {
   otherUserId: string;
   otherUserName: string;
 }
 
-export default function StartConversationButton({ otherUserId, otherUserName }: Props) {
+export default function StartConversationButton({
+  otherUserId,
+  otherUserName,
+}: Props) {
   const router = useRouter();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -25,15 +28,15 @@ export default function StartConversationButton({ otherUserId, otherUserName }: 
         conversationId = await createConversation(
           user.uid,
           otherUserId,
-          user.displayName || 'You',
-          otherUserName
+          user.displayName || "You",
+          otherUserName,
         );
       }
 
       router.push(`/messages/${conversationId}`);
     } catch (error) {
-      console.error('Failed to start conversation:', error);
-      Alert.alert('Error', 'Failed to start conversation. Please try again.');
+      console.error("Failed to start conversation:", error);
+      Alert.alert("Error", "Failed to start conversation. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -46,7 +49,7 @@ export default function StartConversationButton({ otherUserId, otherUserName }: 
       disabled={loading}
     >
       <Text style={styles.buttonText}>
-        {loading ? 'Starting...' : '💬 Message'}
+        {loading ? "Starting..." : "💬 Message"}
       </Text>
     </TouchableOpacity>
   );
@@ -54,15 +57,15 @@ export default function StartConversationButton({ otherUserId, otherUserName }: 
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: "#007AFF",
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   buttonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

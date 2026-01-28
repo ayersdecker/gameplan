@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   TextInput,
@@ -8,22 +8,26 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-} from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useAuth } from '@/src/hooks/useAuth';
-import { sendEncryptedMessage, subscribeToMessages, Message } from '@/src/services/messaging';
+} from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useAuth } from "../../src/hooks/useAuth";
+import {
+  sendEncryptedMessage,
+  subscribeToMessages,
+  Message,
+} from "../../src/services/messaging";
 
 export default function ConversationScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
-    if (!id || typeof id !== 'string') return;
+    if (!id || typeof id !== "string") return;
 
     const unsubscribe = subscribeToMessages(id, (msgs) => {
       setMessages(msgs);
@@ -40,14 +44,14 @@ export default function ConversationScreen() {
   }, [messages]);
 
   const handleSend = async () => {
-    if (!input.trim() || !user || typeof id !== 'string') return;
+    if (!input.trim() || !user || typeof id !== "string") return;
 
     try {
       await sendEncryptedMessage(id, user.uid, input);
-      setInput('');
+      setInput("");
     } catch (error) {
-      console.error('Failed to send message:', error);
-      alert('Failed to send message. Please try again.');
+      console.error("Failed to send message:", error);
+      alert("Failed to send message. Please try again.");
     }
   };
 
@@ -62,7 +66,7 @@ export default function ConversationScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={100}
     >
       <View style={styles.header}>
@@ -86,13 +90,15 @@ export default function ConversationScreen() {
                 isMe ? styles.myMessage : styles.theirMessage,
               ]}
             >
-              <Text style={isMe ? styles.myMessageText : styles.theirMessageText}>
+              <Text
+                style={isMe ? styles.myMessageText : styles.theirMessageText}
+              >
                 {item.content}
               </Text>
               <Text style={styles.timestamp}>
                 {item.timestamp?.toDate().toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
+                  hour: "2-digit",
+                  minute: "2-digit",
                 })}
               </Text>
             </View>
@@ -111,7 +117,10 @@ export default function ConversationScreen() {
         />
         <TouchableOpacity
           onPress={handleSend}
-          style={[styles.sendButton, !input.trim() && styles.sendButtonDisabled]}
+          style={[
+            styles.sendButton,
+            !input.trim() && styles.sendButtonDisabled,
+          ]}
           disabled={!input.trim()}
         >
           <Text style={styles.sendButtonText}>Send</Text>
@@ -124,54 +133,54 @@ export default function ConversationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   backButton: {
     fontSize: 16,
-    color: '#007AFF',
+    color: "#007AFF",
     marginRight: 16,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   loadingText: {
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 32,
     fontSize: 16,
-    color: '#666',
+    color: "#666",
   },
   messageList: {
     padding: 16,
   },
   messageBubble: {
-    maxWidth: '75%',
+    maxWidth: "75%",
     padding: 12,
     borderRadius: 16,
     marginBottom: 8,
   },
   myMessage: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#007AFF',
+    alignSelf: "flex-end",
+    backgroundColor: "#007AFF",
   },
   theirMessage: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#E5E5EA',
+    alignSelf: "flex-start",
+    backgroundColor: "#E5E5EA",
   },
   myMessageText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
   },
   theirMessageText: {
-    color: '#000',
+    color: "#000",
     fontSize: 16,
   },
   timestamp: {
@@ -180,15 +189,15 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   inputContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: 12,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: "#eee",
   },
   input: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -197,17 +206,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   sendButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: "#007AFF",
     borderRadius: 20,
     paddingHorizontal: 20,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   sendButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: "#ccc",
   },
   sendButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: "#fff",
+    fontWeight: "600",
     fontSize: 16,
   },
 });

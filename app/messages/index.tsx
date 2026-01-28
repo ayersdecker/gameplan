@@ -1,8 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { View, FlatList, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAuth } from '@/src/hooks/useAuth';
-import { subscribeToConversations, Conversation } from '@/src/services/messaging';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  FlatList,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { useAuth } from "../../src/hooks/useAuth";
+import {
+  subscribeToConversations,
+  Conversation,
+} from "../../src/services/messaging";
 
 export default function ConversationsScreen() {
   const router = useRouter();
@@ -22,8 +31,10 @@ export default function ConversationsScreen() {
   }, [user]);
 
   const getOtherParticipantName = (conversation: Conversation) => {
-    const otherUserId = conversation.participants.find((id) => id !== user?.uid);
-    return conversation.participantNames?.[otherUserId || ''] || 'Unknown';
+    const otherUserId = conversation.participants.find(
+      (id) => id !== user?.uid,
+    );
+    return conversation.participantNames?.[otherUserId || ""] || "Unknown";
   };
 
   if (loading) {
@@ -77,52 +88,52 @@ export default function ConversationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   header: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   emptyState: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 32,
   },
   emptyText: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 8,
-    color: '#666',
+    color: "#666",
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
+    color: "#999",
+    textAlign: "center",
   },
   conversationItem: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   conversationInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 4,
   },
   participantName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   timestamp: {
     fontSize: 12,
-    color: '#999',
+    color: "#999",
   },
   preview: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
 });
