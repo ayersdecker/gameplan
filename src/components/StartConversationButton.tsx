@@ -22,11 +22,11 @@ export default function StartConversationButton({
 
     setLoading(true);
     try {
-      let conversationId = await findConversation(user.uid, otherUserId);
+      let conversationId = await findConversation(user.id, otherUserId);
 
       if (!conversationId) {
         conversationId = await createConversation(
-          user.uid,
+          user.id,
           otherUserId,
           user.displayName || "You",
           otherUserName,

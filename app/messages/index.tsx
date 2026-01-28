@@ -22,7 +22,7 @@ export default function ConversationsScreen() {
   useEffect(() => {
     if (!user) return;
 
-    const unsubscribe = subscribeToConversations(user.uid, (convos) => {
+    const unsubscribe = subscribeToConversations(user.id, (convos) => {
       setConversations(convos);
       setLoading(false);
     });
@@ -31,9 +31,7 @@ export default function ConversationsScreen() {
   }, [user]);
 
   const getOtherParticipantName = (conversation: Conversation) => {
-    const otherUserId = conversation.participants.find(
-      (id) => id !== user?.uid,
-    );
+    const otherUserId = conversation.participants.find((id) => id !== user?.id);
     return conversation.participantNames?.[otherUserId || ""] || "Unknown";
   };
 

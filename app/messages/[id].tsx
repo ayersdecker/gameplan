@@ -14,6 +14,7 @@ import { useAuth } from "../../src/hooks/useAuth";
 import {
   sendEncryptedMessage,
   subscribeToMessages,
+  markMessagesAsRead,
   Message,
 } from "../../src/services/messaging";
 
@@ -27,15 +28,23 @@ export default function ConversationScreen() {
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
-    if (!id || typeof id !== "string") return;
+    if (!id || typeof id !== "string" || !user) return;
 
-    const unsubscribe = subscribeToMessages(id, (msgs) => {
-      setMessages(msgs);
-      setLoading(false);
-    });
+    console.log(
+      `[ConversationScreen] Subscribing to messages for conversation ${id} with userId: ${user.id}`,
+    );
+
+    const unsubscribe = subscribeToMessages(
+      id,
+      (msgs) => {
+        setMessages(msgs);
+        setLoading(false);
+      },
+      user.id,
+    );
 
     return unsubscribe;
-  }, [id]);
+  }, [id, user]);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -43,11 +52,22 @@ export default function ConversationScreen() {
     }
   }, [messages]);
 
+  // Mark messages as read when viewing the conversation
+  useEffect(() => {
+    if (!id || typeof id !== "string" || !user) return;
+
+    markMessagesAsRead(id, user.id).catch((error) => {
+      console.error("Failed to mark messages as read:", error);
+    });
+  }, [id, user, messages.length]);
+
   const handleSend = async () => {
     if (!input.trim() || !user || typeof id !== "string") return;
 
+    console.log(`[ConversationScreen] Sending message with userId: ${user.id}`);
+
     try {
-      await sendEncryptedMessage(id, user.uid, input);
+      await sendEncryptedMessage(id, user.id, input, user.id);
       setInput("");
     } catch (error) {
       console.error("Failed to send message:", error);
@@ -69,20 +89,13 @@ export default function ConversationScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={100}
     >
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backButton}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Encrypted Chat 🔒</Text>
-      </View>
-
       <FlatList
         ref={flatListRef}
         data={messages}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.messageList}
         renderItem={({ item }) => {
-          const isMe = item.senderId === user?.uid;
+          const isMe = item.senderId === user?.id;
           return (
             <View
               style={[
@@ -95,12 +108,19 @@ export default function ConversationScreen() {
               >
                 {item.content}
               </Text>
-              <Text style={styles.timestamp}>
-                {item.timestamp?.toDate().toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </Text>
+              <View style={styles.messageFooter}>
+                <Text style={styles.timestamp}>
+                  {item.timestamp?.toDate().toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </Text>
+                {isMe && (
+                  <Text style={styles.readReceipt}>
+                    {item.read ? "✓✓" : "✓"}
+                  </Text>
+                )}
+              </View>
             </View>
           );
         }}
@@ -135,23 +155,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f5f5f5",
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-  backButton: {
-    fontSize: 16,
-    color: "#007AFF",
-    marginRight: 16,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-  },
   loadingText: {
     textAlign: "center",
     marginTop: 32,
@@ -183,10 +186,21 @@ const styles = StyleSheet.create({
     color: "#000",
     fontSize: 16,
   },
+  messageFooter: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    marginTop: 4,
+    gap: 4,
+  },
   timestamp: {
     fontSize: 10,
-    marginTop: 4,
     opacity: 0.7,
+  },
+  readReceipt: {
+    fontSize: 10,
+    color: "#34C759",
+    fontWeight: "bold",
   },
   inputContainer: {
     flexDirection: "row",

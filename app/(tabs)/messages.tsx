@@ -22,7 +22,7 @@ export default function MessagesTab() {
   useEffect(() => {
     if (!user) return;
 
-    const unsubscribe = subscribeToConversations(user.uid, (convos) => {
+    const unsubscribe = subscribeToConversations(user.id, (convos) => {
       setConversations(convos);
       setLoading(false);
     });
@@ -31,9 +31,7 @@ export default function MessagesTab() {
   }, [user]);
 
   const getOtherParticipantName = (conversation: Conversation) => {
-    const otherUserId = conversation.participants.find(
-      (id) => id !== user?.uid,
-    );
+    const otherUserId = conversation.participants.find((id) => id !== user?.id);
     return conversation.participantNames?.[otherUserId || ""] || "Unknown";
   };
 
@@ -67,21 +65,33 @@ export default function MessagesTab() {
         <FlatList
           data={conversations}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.conversationItem}
-              onPress={() => router.push(`/messages/${item.id}`)}
-            >
-              <View style={styles.conversationInfo}>
-                <Text style={styles.participantName}>
-                  {getOtherParticipantName(item)}
-                </Text>
-                <Text style={styles.timestamp}>
-                  {item.lastMessageAt?.toDate().toLocaleDateString()}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          )}
+          renderItem={({ item }) => {
+            const unreadCount = item.unreadCount?.[user?.id || ""] || 0;
+            return (
+              <TouchableOpacity
+                style={styles.conversationItem}
+                onPress={() => router.push(`/messages/${item.id}`)}
+              >
+                <View style={styles.conversationInfo}>
+                  <View style={styles.nameContainer}>
+                    <Text style={styles.participantName}>
+                      {getOtherParticipantName(item)}
+                    </Text>
+                    {unreadCount > 0 && (
+                      <View style={styles.unreadBadge}>
+                        <Text style={styles.unreadCount}>
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.timestamp}>
+                    {item.lastMessageAt?.toDate().toLocaleDateString()}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          }}
         />
       )}
     </View>
@@ -146,9 +156,28 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 4,
   },
+  nameContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   participantName: {
     fontSize: 16,
     fontWeight: "600",
+  },
+  unreadBadge: {
+    backgroundColor: "#007AFF",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 6,
+  },
+  unreadCount: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "bold",
   },
   timestamp: {
     fontSize: 12,

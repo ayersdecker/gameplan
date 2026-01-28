@@ -20,6 +20,7 @@ import {
 import { db } from "../../src/services/firebase";
 import { useAuth } from "../../src/hooks/useAuth";
 import { User } from "../../src/types";
+import StartConversationButton from "../../src/components/StartConversationButton";
 
 export default function FriendsList() {
   const { user, refreshUser } = useAuth();
@@ -254,12 +255,21 @@ export default function FriendsList() {
                     </Text>
                   )}
                 </View>
-                <TouchableOpacity
-                  style={styles.removeButton}
-                  onPress={() => removeFriend(friend.id, friend.displayName)}
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
                 >
-                  <Text style={styles.removeButtonText}>Remove</Text>
-                </TouchableOpacity>
+                  <StartConversationButton
+                    otherUserId={friend.id}
+                    otherUserName={friend.displayName}
+                  />
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    onPress={() => removeFriend(friend.id, friend.displayName)}
+                  >
+                    <Text style={styles.removeButtonText}>Remove</Text>
+                  </TouchableOpacity>
+                  {/* Message button */}
+                </View>
               </View>
             ))
           )
