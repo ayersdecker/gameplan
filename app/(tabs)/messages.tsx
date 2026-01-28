@@ -1,8 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { View, FlatList, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAuth } from '@/src/hooks/useAuth';
-import { subscribeToConversations, Conversation } from '@/src/services/messaging';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  FlatList,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { useAuth } from "../../src/hooks/useAuth";
+import {
+  subscribeToConversations,
+  Conversation,
+} from "../../src/services/messaging";
 
 export default function MessagesTab() {
   const router = useRouter();
@@ -22,8 +31,10 @@ export default function MessagesTab() {
   }, [user]);
 
   const getOtherParticipantName = (conversation: Conversation) => {
-    const otherUserId = conversation.participants.find((id) => id !== user?.uid);
-    return conversation.participantNames?.[otherUserId || ''] || 'Unknown';
+    const otherUserId = conversation.participants.find(
+      (id) => id !== user?.uid,
+    );
+    return conversation.participantNames?.[otherUserId || ""] || "Unknown";
   };
 
   if (loading) {
@@ -43,7 +54,7 @@ export default function MessagesTab() {
         <Text style={styles.headerTitle}>Messages 🔒</Text>
         <Text style={styles.headerSubtitle}>End-to-end encrypted</Text>
       </View>
-      
+
       {conversations.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>💬</Text>
