@@ -9,9 +9,12 @@
     "web": "expo start --web"
   },
   "dependencies": {
-    "@expo/vector-icons": "^15.0.3",
     "@expo-google-fonts/inter": "^0.2.3",
+    "@expo/vector-icons": "^15.0.3",
     "@react-native-google-signin/google-signin": "^16.1.1",
+    "@stablelib/base64": "^2.0.1",
+    "@stablelib/random": "^2.0.1",
+    "@stablelib/xchacha20poly1305": "^2.0.1",
     "@types/three": "^0.182.0",
     "expo": "~54.0.32",
     "expo-auth-session": "^7.0.10",
@@ -21,6 +24,7 @@
     "expo-linking": "^8.0.11",
     "expo-location": "^19.0.8",
     "expo-router": "^6.0.22",
+    "expo-secure-store": "^15.0.8",
     "expo-status-bar": "~3.0.9",
     "expo-web-browser": "^15.0.10",
     "firebase": "^12.8.0",
