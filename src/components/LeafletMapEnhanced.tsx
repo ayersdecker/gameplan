@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   TextInput,
 } from "react-native";
+import { MAP_TILE_URL, MAP_TILE_OPTIONS } from "../services/mapTiles";
 
 interface Location {
   latitude: number;
@@ -167,6 +168,7 @@ const LeafletMapEnhanced: React.FC<LeafletMapProps> = ({
     new Set(),
   );
   const [showFilters, setShowFilters] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   // Load Leaflet
   useEffect(() => {
@@ -176,6 +178,7 @@ const LeafletMapEnhanced: React.FC<LeafletMapProps> = ({
         setL(leaflet.default);
       } catch (error) {
         console.error("Failed to load Leaflet:", error);
+        setMapError("The map could not load. Check your connection and reload.");
       }
     };
     loadLeaflet();
@@ -186,17 +189,25 @@ const LeafletMapEnhanced: React.FC<LeafletMapProps> = ({
     if (!L || !mapRef.current || mapInstanceRef.current) return;
 
     const map = L.map(mapRef.current, {
-      zoomControl: false,
-      attributionControl: false,
-    }).setView([37.7749, -122.4194], 12);
+      zoomControl: true,
+      attributionControl: true,
+    }).setView([20, 0], 2);
 
-    L.tileLayer(
-      "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-      {
-        maxZoom: 19,
-        minZoom: 2,
-      },
-    ).addTo(map);
+    const tiles = L.tileLayer(MAP_TILE_URL, MAP_TILE_OPTIONS);
+    tiles.on("tileerror", (event: unknown) => {
+      console.error("OpenStreetMap tile failed to load:", event);
+      setMapError(
+        "OpenStreetMap tiles could not load. Check your connection and allow " +
+          "this site's referrer in your browser's privacy settings. If you see " +
+          "403 access-blocked tiles, the provider may also be blocking your network.",
+      );
+    });
+    tiles.on("load", () => {
+      if (mapRef.current?.querySelector(".leaflet-tile-loaded")) {
+        setMapError(null);
+      }
+    });
+    tiles.addTo(map);
 
     mapInstanceRef.current = map;
 
@@ -229,17 +240,6 @@ const LeafletMapEnhanced: React.FC<LeafletMapProps> = ({
     };
     locateButton.addTo(map);
 
-    // Listen for locate user event
-    window.addEventListener("locateUser", () => {
-      if (userLocation && mapInstanceRef.current) {
-        mapInstanceRef.current.setView(
-          [userLocation.latitude, userLocation.longitude],
-          15,
-          { animate: true, duration: 1 },
-        );
-      }
-    });
-
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
@@ -247,6 +247,20 @@ const LeafletMapEnhanced: React.FC<LeafletMapProps> = ({
       }
     };
   }, [L]);
+
+  useEffect(() => {
+    const handleLocateUser = () => {
+      if (userLocation && mapInstanceRef.current) {
+        mapInstanceRef.current.setView(
+          [userLocation.latitude, userLocation.longitude],
+          15,
+          { animate: true, duration: 1 },
+        );
+      }
+    };
+    window.addEventListener("locateUser", handleLocateUser);
+    return () => window.removeEventListener("locateUser", handleLocateUser);
+  }, [userLocation]);
 
   // Fix map size when component becomes visible
   useEffect(() => {
@@ -277,7 +291,7 @@ const LeafletMapEnhanced: React.FC<LeafletMapProps> = ({
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", resizeMap);
     };
-  }, []);
+  }, [L]);
 
   // Update user location marker and radius
   useEffect(() => {
@@ -574,6 +588,14 @@ const LeafletMapEnhanced: React.FC<LeafletMapProps> = ({
 
   return (
     <View style={styles.container}>
+      {mapError && (
+        <View accessibilityRole="alert" style={{ padding: 12 }}>
+          <Text>{mapError}</Text>
+          <TouchableOpacity onPress={() => window.location.reload()}>
+            <Text style={{ color: "#007AFF", marginTop: 8 }}>Reload map</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       {/* Search and filter bar */}
       <View style={styles.controlsContainer}>
         <View style={styles.searchContainer}>
@@ -655,7 +677,17 @@ const LeafletMapEnhanced: React.FC<LeafletMapProps> = ({
       )}
 
       {/* Map */}
-      <div ref={mapRef} style={{ flex: 1, width: "100%", height: "100%" }} />
+      <div
+        ref={mapRef}
+        style={{
+          flex: 1,
+          width: "100%",
+          minHeight: 0,
+          position: "relative",
+          zIndex: 0,
+          overflow: "hidden",
+        }}
+      />
 
       {/* Results count */}
       {(searchQuery || selectedCategories.size > 0) && (

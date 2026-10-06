@@ -9,6 +9,7 @@ import {
   Platform,
 } from "react-native";
 import type * as Leaflet from "leaflet";
+import { MAP_TILE_URL, MAP_TILE_OPTIONS } from "../services/mapTiles";
 
 let leafletModule: typeof import("leaflet") | null = null;
 
@@ -65,13 +66,7 @@ export const MapPickerModal: React.FC<MapPickerModalProps> = ({
         13,
       );
 
-      L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
-        {
-          maxZoom: 19,
-          attribution: "© CartoDB, © OpenStreetMap contributors",
-        },
-      ).addTo(mapInstanceRef.current);
+      L.tileLayer(MAP_TILE_URL, MAP_TILE_OPTIONS).addTo(mapInstanceRef.current);
 
       // Handle map clicks
       mapInstanceRef.current.on("click", handleMapClick);

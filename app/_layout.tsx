@@ -1,6 +1,13 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Stack } from "expo-router";
-import { Text, TextInput, View, StyleSheet } from "react-native";
+import {
+  Text,
+  TextInput,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Platform,
+} from "react-native";
 import { useFonts } from "expo-font";
 import {
   Inter_400Regular,
@@ -11,11 +18,14 @@ import {
 
 import { AuthProvider } from "../src/hooks/useAuth";
 import { isFirebaseConfigured } from "../src/services/firebase";
+import MapTab from "./(tabs)/map";
+import "../src/styles/leaflet";
 
 const BASE_FONT = "Inter_400Regular";
 let didSetDefaultFonts = false;
 
 export default function RootLayout() {
+  const [showMapPreview, setShowMapPreview] = useState(false);
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -47,6 +57,20 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   if (!isFirebaseConfigured()) {
+    if (showMapPreview && Platform.OS === "web") {
+      return (
+        <View style={{ flex: 1 }}>
+          <TouchableOpacity
+            style={styles.previewButton}
+            onPress={() => setShowMapPreview(false)}
+          >
+            <Text style={styles.previewButtonText}>Back to Firebase setup</Text>
+          </TouchableOpacity>
+          <MapTab />
+        </View>
+      );
+    }
+
     return (
       <View style={styles.configurationContainer}>
         <Text style={styles.configurationTitle}>
@@ -65,6 +89,14 @@ export default function RootLayout() {
           For the published website, set the EXPO_PUBLIC_FIREBASE_* GitHub
           Actions secrets and rebuild and redeploy the site.
         </Text>
+        {Platform.OS === "web" && (
+          <TouchableOpacity
+            style={styles.previewButton}
+            onPress={() => setShowMapPreview(true)}
+          >
+            <Text style={styles.previewButtonText}>Preview OpenStreetMap</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   }
@@ -104,5 +136,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333333",
     marginBottom: 16,
+  },
+  previewButton: {
+    backgroundColor: "#007AFF",
+    padding: 14,
+    alignItems: "center",
+  },
+  previewButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
   },
 });

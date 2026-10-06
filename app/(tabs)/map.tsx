@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
   Animated,
   Easing,
   ScrollView,
@@ -131,10 +130,12 @@ export default function MapTab() {
     getCurrentLocation,
     getDistance,
     loading: gettingLocation,
+    error: locationError,
   } = useLocation();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [nearbyActivities, setNearbyActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activitiesError, setActivitiesError] = useState<string | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
     null,
   );
@@ -199,6 +200,7 @@ export default function MapTab() {
       },
       (error) => {
         console.error("Error loading activities:", error);
+        setActivitiesError("Activities could not load. The map is still available.");
         setLoading(false);
       },
     );
@@ -221,20 +223,6 @@ export default function MapTab() {
       );
     }
 
-    // Web-only leaflet map component
-    if (loading && !nearbyActivities.length) {
-      return (
-        <View style={styles.container}>
-          <ActivityIndicator
-            size="large"
-            color="#007AFF"
-            style={{ marginTop: 20 }}
-          />
-          <Text style={styles.loadingText}>Loading map...</Text>
-        </View>
-      );
-    }
-
     const LeafletMapEnhanced = getLeafletMapEnhanced();
 
     if (!LeafletMapEnhanced) {
@@ -250,16 +238,25 @@ export default function MapTab() {
         {!isFirebaseConfigured() && (
           <View style={styles.configurationBanner}>
             <Text style={styles.configurationText}>
-              Firebase is not configured. Add your Firebase credentials from
-              .env.example to .env to load activities. Map tiles do not need an
-              API key.
+              Map-only preview: OpenStreetMap needs no API key. Configure
+              Firebase to enable sign-in and activity data.
             </Text>
           </View>
+        )}
+        {activitiesError && (
+          <View style={styles.configurationBanner}>
+            <Text accessibilityRole="alert" style={styles.configurationText}>
+              {activitiesError}
+            </Text>
+          </View>
+        )}
+        {loading && isFirebaseConfigured() && (
+          <Text style={styles.loadingText}>Loading activities...</Text>
         )}
         {!userLocation && !gettingLocation && (
           <View style={styles.noLocationBanner}>
             <Text style={styles.noLocationText}>
-              📍 Enable location to see the map
+              {locationError || "Enable location to center the map near you."}
             </Text>
             <TouchableOpacity
               style={styles.enableLocationButton}
@@ -270,20 +267,18 @@ export default function MapTab() {
           </View>
         )}
 
-        {userLocation && (
-          <LeafletMapEnhanced
-            activities={activities}
-            userLocation={userLocation}
-            selectedActivityId={selectedActivity?.id}
-            onActivitySelect={(id: string) => {
-              const activity = activities.find((a) => a.id === id);
-              if (activity) {
-                setSelectedActivity(activity);
-                router.push(`/activities/${id}`);
-              }
-            }}
-          />
-        )}
+        <LeafletMapEnhanced
+          activities={activities}
+          userLocation={userLocation}
+          selectedActivityId={selectedActivity?.id}
+          onActivitySelect={(id: string) => {
+            const activity = activities.find((a) => a.id === id);
+            if (activity) {
+              setSelectedActivity(activity);
+              router.push(`/activities/${id}`);
+            }
+          }}
+        />
       </View>
     );
   }

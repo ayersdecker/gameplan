@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import type * as Leaflet from "leaflet";
 import { Activity } from "../types";
+import { MAP_TILE_URL, MAP_TILE_OPTIONS } from "../services/mapTiles";
 
 let leafletModule: typeof import("leaflet") | null = null;
 let markerClusterGroup: any = null;
@@ -192,14 +193,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         15,
       );
 
-      L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
-        {
-          attribution: "© CartoDB, © OpenStreetMap contributors",
-          maxZoom: 19,
-          minZoom: 2,
-        },
-      ).addTo(map);
+      L.tileLayer(MAP_TILE_URL, MAP_TILE_OPTIONS).addTo(map);
 
       mapInstanceRef.current = map;
       setMapReady(true);

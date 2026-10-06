@@ -36,7 +36,8 @@ Web (GitHub Pages): https://ayersdecker.github.io/gameplan/
    - Create a Firestore database
    - Copy `.env.example` to `.env` and fill in your Firebase credentials
 
-   The activity map's tile layer does not require a map API key. Firebase
+   All web maps use OpenStreetMap tiles through Leaflet and do not require a map
+   API key. Firebase
    credentials are needed for sign-in and activity data. Find these values in
    Firebase Console under **Project settings > General > Your apps > Web app >
    SDK setup and configuration > Config**. Use the Firebase web app's `apiKey`
@@ -45,6 +46,26 @@ Web (GitHub Pages): https://ayersdecker.github.io/gameplan/
    After changing `.env`, restart Expo with `npx expo start --clear`. If these
    settings are missing or still contain placeholders, the app displays a
    configuration screen instead of attempting to initialize Firebase Auth.
+   In the web app, select **Preview OpenStreetMap** on that screen to browse a
+   map without configuring Firebase. This is a map-only preview; sign-in and
+   activity data remain unavailable. Location permission is optional: the map
+   opens to a world view and centers near you when location is available.
+
+   The map renders independently of activity loading, with OpenStreetMap
+   attribution visible. Internet access is required. The public tile service
+   has no uptime guarantee; follow the
+   [OpenStreetMap tile usage policy](https://operations.osmfoundation.org/policies/tiles/),
+   including no bulk downloads or offline prefetching.
+
+   Leaflet's stylesheet is bundled locally for development and production.
+   Tile images explicitly use `strict-origin-when-cross-origin` to send the real
+   page origin as the HTTP Referer, as required by OpenStreetMap. A browser
+   extension or network policy that strips referrers can still prevent this.
+   If tiles display **403 / Access blocked**, check the browser's Network panel
+   for the tile request's Referer and consult the provider's
+   [blocked-access guidance](https://osm.wiki/Blocked). An IP/network block
+   requires resolution with the provider; do not bypass it with proxies or
+   forged headers.
 
    For GitHub Pages, set the `EXPO_PUBLIC_FIREBASE_*` repository secrets used by
    the deployment workflow, then rebuild and redeploy. Environment variables are
@@ -62,6 +83,7 @@ Web (GitHub Pages): https://ayersdecker.github.io/gameplan/
 - `npm run android` - Run on Android emulator
 - `npm run ios` - Run on iOS simulator (macOS only)
 - `npm run web` - Run in web browser
+- `node --test tests/map.test.cjs` - Test the keyless web map and configuration preview
 
 ## VS Code + Copilot Optimization
 
