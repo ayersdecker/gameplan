@@ -10,7 +10,11 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { Platform } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
-import { auth, db, assertFirebaseConfigured } from "../services/firebase";
+import {
+  getFirebaseAuth,
+  db,
+  assertFirebaseConfigured,
+} from "../services/firebase";
 import { User } from "../types";
 
 interface AuthContextType {
@@ -39,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
+    const auth = getFirebaseAuth();
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
       setFirebaseUser(firebaseUser);
       if (firebaseUser) {
@@ -101,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const handleGoogleSignInToken = async (idToken: string) => {
     try {
       const googleCredential = GoogleAuthProvider.credential(idToken);
-      await signInWithCredential(auth, googleCredential);
+      await signInWithCredential(getFirebaseAuth(), googleCredential);
     } catch (error) {
       console.error("Firebase Sign-In Error:", error);
       throw error;
@@ -115,7 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Use Firebase's signInWithPopup for web (works better in browser environments)
       if (Platform.OS === "web") {
         const provider = new GoogleAuthProvider();
-        await signInWithPopup(auth, provider);
+        await signInWithPopup(getFirebaseAuth(), provider);
       } else {
         // Use expo-auth-session for native platforms
         const result = await promptAsync();
@@ -131,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      await firebaseSignOut(auth);
+      await firebaseSignOut(getFirebaseAuth());
     } catch (error) {
       console.error("Sign Out Error:", error);
       throw error;

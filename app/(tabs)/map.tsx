@@ -17,7 +17,7 @@ import {
   onSnapshot,
   limit,
 } from "firebase/firestore";
-import { db } from "../../src/services/firebase";
+import { db, isFirebaseConfigured } from "../../src/services/firebase";
 import { useRouter } from "expo-router";
 import { useLocation } from "../../src/hooks/useLocation";
 import { Activity } from "../../src/types";
@@ -148,6 +148,11 @@ export default function MapTab() {
   }, []);
 
   useEffect(() => {
+    if (!isFirebaseConfigured()) {
+      setLoading(false);
+      return;
+    }
+
     // Real-time listener for all public activities
     const q = query(
       collection(db, "activities"),
@@ -242,6 +247,15 @@ export default function MapTab() {
 
     return (
       <View style={[styles.container, { width: "100%", height: "100%" }]}>
+        {!isFirebaseConfigured() && (
+          <View style={styles.configurationBanner}>
+            <Text style={styles.configurationText}>
+              Firebase is not configured. Add your Firebase credentials from
+              .env.example to .env to load activities. Map tiles do not need an
+              API key.
+            </Text>
+          </View>
+        )}
         {!userLocation && !gettingLocation && (
           <View style={styles.noLocationBanner}>
             <Text style={styles.noLocationText}>
@@ -298,6 +312,16 @@ export default function MapTab() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {!isFirebaseConfigured() && (
+          <View style={styles.configurationBanner}>
+            <Text style={styles.configurationText}>
+              Firebase is not configured. Add your Firebase credentials from
+              .env.example to .env to load activities. Map tiles do not need an
+              API key.
+            </Text>
+          </View>
+        )}
 
         {!userLocation && !gettingLocation && (
           <View style={styles.noLocationBanner}>
@@ -741,6 +765,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderBottomWidth: 2,
     borderBottomColor: "#007AFF",
+  },
+  configurationBanner: {
+    backgroundColor: "#FFF4E5",
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0B45A",
+  },
+  configurationText: {
+    fontSize: 13,
+    color: "#704214",
   },
   noLocationText: {
     fontSize: 14,

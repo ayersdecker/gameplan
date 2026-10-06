@@ -36,6 +36,21 @@ Web (GitHub Pages): https://ayersdecker.github.io/gameplan/
    - Create a Firestore database
    - Copy `.env.example` to `.env` and fill in your Firebase credentials
 
+   The activity map's tile layer does not require a map API key. Firebase
+   credentials are needed for sign-in and activity data. Find these values in
+   Firebase Console under **Project settings > General > Your apps > Web app >
+   SDK setup and configuration > Config**. Use the Firebase web app's `apiKey`
+   for `EXPO_PUBLIC_FIREBASE_API_KEY`, not a Google Maps key.
+
+   After changing `.env`, restart Expo with `npx expo start --clear`. If these
+   settings are missing or still contain placeholders, the app displays a
+   configuration screen instead of attempting to initialize Firebase Auth.
+
+   For GitHub Pages, set the `EXPO_PUBLIC_FIREBASE_*` repository secrets used by
+   the deployment workflow, then rebuild and redeploy. Environment variables are
+   embedded in the web build; changing secrets alone does not update a deployed
+   site.
+
 4. Run the app:
    ```bash
    npm start
@@ -74,4 +89,3 @@ This project is optimized for VS Code with GitHub Copilot:
 ## License
 
 See LICENSE file for details.
-

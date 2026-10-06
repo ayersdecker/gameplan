@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { Stack } from "expo-router";
-import { Text, TextInput } from "react-native";
+import { Text, TextInput, View, StyleSheet } from "react-native";
 import { useFonts } from "expo-font";
 import {
   Inter_400Regular,
@@ -10,6 +10,7 @@ import {
 } from "@expo-google-fonts/inter";
 
 import { AuthProvider } from "../src/hooks/useAuth";
+import { isFirebaseConfigured } from "../src/services/firebase";
 
 const BASE_FONT = "Inter_400Regular";
 let didSetDefaultFonts = false;
@@ -45,6 +46,29 @@ export default function RootLayout() {
 
   if (!fontsLoaded) return null;
 
+  if (!isFirebaseConfigured()) {
+    return (
+      <View style={styles.configurationContainer}>
+        <Text style={styles.configurationTitle}>
+          Firebase configuration required
+        </Text>
+        <Text style={styles.configurationText}>
+          GamePlan needs Firebase credentials for sign-in and activity data.
+          The map tiles do not require a separate API key.
+        </Text>
+        <Text style={styles.configurationText}>
+          For local development, copy .env.example to .env and replace the
+          placeholders with your Firebase project settings. Then restart Expo
+          with npx expo start --clear.
+        </Text>
+        <Text style={styles.configurationText}>
+          For the published website, set the EXPO_PUBLIC_FIREBASE_* GitHub
+          Actions secrets and rebuild and redeploy the site.
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <AuthProvider>
       <Stack
@@ -62,3 +86,23 @@ export default function RootLayout() {
     </AuthProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  configurationContainer: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 24,
+    backgroundColor: "#FFFFFF",
+  },
+  configurationTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#704214",
+    marginBottom: 16,
+  },
+  configurationText: {
+    fontSize: 16,
+    color: "#333333",
+    marginBottom: 16,
+  },
+});
