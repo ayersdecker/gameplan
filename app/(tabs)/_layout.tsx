@@ -1,9 +1,14 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { DesktopSidebar } from "../../src/components/DesktopSidebar";
+import { useResponsive } from "../../src/hooks/useResponsive";
 
 export default function TabsLayout() {
+  const { isDesktop } = useResponsive();
+
   return (
     <Tabs
+      tabBar={isDesktop ? (props) => <DesktopSidebar {...props} /> : undefined}
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
@@ -23,6 +28,7 @@ export default function TabsLayout() {
           textTransform: "none",
           fontFamily: "Inter_600SemiBold",
         },
+        sceneStyle: isDesktop ? { marginLeft: 220 } : undefined,
       }}
     >
       <Tabs.Screen

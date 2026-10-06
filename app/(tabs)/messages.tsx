@@ -12,10 +12,12 @@ import {
   subscribeToConversations,
   Conversation,
 } from "../../src/services/messaging";
+import { useResponsive } from "../../src/hooks/useResponsive";
 
 export default function MessagesTab() {
   const router = useRouter();
   const { user } = useAuth();
+  const { isDesktop } = useResponsive();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,7 +40,7 @@ export default function MessagesTab() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
+        <View style={[styles.header, isDesktop && styles.headerDesktop]}>
           <Text style={styles.headerTitle}>Messages 🔒</Text>
         </View>
         <Text style={styles.loadingText}>Loading conversations...</Text>
@@ -48,7 +50,7 @@ export default function MessagesTab() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, isDesktop && styles.headerDesktop]}>
         <Text style={styles.headerTitle}>Messages 🔒</Text>
         <Text style={styles.headerSubtitle}>End-to-end encrypted</Text>
       </View>
@@ -63,6 +65,7 @@ export default function MessagesTab() {
         </View>
       ) : (
         <FlatList
+          style={isDesktop && styles.listDesktop}
           data={conversations}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => {
@@ -109,6 +112,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
+  },
+  headerDesktop: {
+    paddingTop: 24,
+  },
+  listDesktop: {
+    width: "100%",
+    maxWidth: 880,
+    alignSelf: "center",
   },
   headerTitle: {
     fontSize: 28,

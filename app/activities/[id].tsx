@@ -32,6 +32,7 @@ import { useAuth } from "../../src/hooks/useAuth";
 import { Activity, Message } from "../../src/types";
 import { addActivityToCalendar } from "../../src/utils/calendar";
 import { awardBadge } from "../../src/utils/badges";
+import { ScreenContainer } from "../../src/components/ScreenContainer";
 
 export default function ActivityDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -369,6 +370,7 @@ export default function ActivityDetail() {
       </View>
 
       <ScrollView style={styles.content}>
+        <ScreenContainer>
         <View style={styles.activitySection}>
           <View style={styles.activityHeader}>
             <Text style={styles.activityTitle}>{activity.title}</Text>
@@ -555,6 +557,7 @@ export default function ActivityDetail() {
             ))
           )}
         </View>
+        </ScreenContainer>
       </ScrollView>
 
       {isParticipant && (

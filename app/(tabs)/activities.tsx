@@ -20,6 +20,8 @@ import {
 import { db } from "../../src/services/firebase";
 import { useAuth } from "../../src/hooks/useAuth";
 import { Activity } from "../../src/types";
+import { ScreenContainer } from "../../src/components/ScreenContainer";
+import { useResponsive } from "../../src/hooks/useResponsive";
 
 const getCategoryColor = (category: string) => {
   const colors: { [key: string]: string } = {
@@ -39,6 +41,7 @@ const getCategoryColor = (category: string) => {
 export default function Activities() {
   const { user } = useAuth();
   const router = useRouter();
+  const { isDesktop } = useResponsive();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -110,26 +113,31 @@ export default function Activities() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Activities</Text>
-        <TouchableOpacity
-          style={styles.createButton}
-          onPress={() => router.push("/activities/create")}
-        >
-          <Text style={styles.createButtonText}>+ Create</Text>
-        </TouchableOpacity>
+      <View style={[styles.header, isDesktop && styles.headerDesktop]}>
+        <ScreenContainer style={styles.headerRow}>
+          <Text style={styles.title}>Activities</Text>
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={() => router.push("/activities/create")}
+          >
+            <Text style={styles.createButtonText}>+ Create</Text>
+          </TouchableOpacity>
+        </ScreenContainer>
       </View>
 
       <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search activities..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+        <ScreenContainer>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search activities..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </ScreenContainer>
       </View>
 
       <View style={styles.filterContainer}>
+        <ScreenContainer style={styles.filterRow}>
         <TouchableOpacity
           style={[
             styles.filterButton,
@@ -178,9 +186,11 @@ export default function Activities() {
             Created
           </Text>
         </TouchableOpacity>
+        </ScreenContainer>
       </View>
 
       <ScrollView style={styles.content}>
+        <ScreenContainer>
         {loading ? (
           <ActivityIndicator
             size="large"
@@ -254,6 +264,7 @@ export default function Activities() {
             </TouchableOpacity>
           ))
         )}
+        </ScreenContainer>
       </ScrollView>
     </View>
   );
@@ -265,14 +276,23 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5f5f5",
   },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     backgroundColor: "#fff",
     padding: 16,
     paddingTop: 48,
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
+  },
+  headerDesktop: {
+    paddingTop: 20,
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  filterRow: {
+    flexDirection: "row",
+    gap: 8,
   },
   title: {
     fontSize: 24,
@@ -303,10 +323,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   filterContainer: {
-    flexDirection: "row",
     backgroundColor: "#fff",
     padding: 16,
-    gap: 8,
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
   },

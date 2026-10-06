@@ -12,10 +12,13 @@ import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
 import { db } from "../../src/services/firebase";
 import { useAuth } from "../../src/hooks/useAuth";
 import { Activity } from "../../src/types";
+import { ScreenContainer } from "../../src/components/ScreenContainer";
+import { useResponsive } from "../../src/hooks/useResponsive";
 
 export default function Home() {
   const { user } = useAuth();
   const router = useRouter();
+  const { isDesktop } = useResponsive();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [suggestedActivity, setSuggestedActivity] = useState<Activity | null>(
     null,
@@ -80,14 +83,16 @@ export default function Home() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.welcomeText}>
-          Welcome back, {user?.displayName}!
-        </Text>
-        <Text style={styles.subtitle}>Ready to join an activity?</Text>
+      <View style={[styles.header, isDesktop && styles.headerDesktop]}>
+        <ScreenContainer>
+          <Text style={styles.welcomeText}>
+            Welcome back, {user?.displayName}!
+          </Text>
+          <Text style={styles.subtitle}>Ready to join an activity?</Text>
+        </ScreenContainer>
       </View>
 
-      <View style={styles.content}>
+      <ScreenContainer scroll style={styles.content}>
         {suggestedActivity && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Suggested For You</Text>
@@ -201,7 +206,7 @@ export default function Home() {
             </View>
           </View>
         </View>
-      </View>
+      </ScreenContainer>
     </View>
   );
 }
@@ -217,6 +222,9 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
+  },
+  headerDesktop: {
+    paddingTop: 20,
   },
   welcomeText: {
     fontSize: 20,

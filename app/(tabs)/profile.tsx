@@ -14,6 +14,8 @@ import { useRouter } from "expo-router";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../../src/services/firebase";
 import { useAuth } from "../../src/hooks/useAuth";
+import { ScreenContainer } from "../../src/components/ScreenContainer";
+import { useResponsive } from "../../src/hooks/useResponsive";
 
 const INTEREST_OPTIONS = [
   "Hiking",
@@ -36,6 +38,7 @@ const INTEREST_OPTIONS = [
 export default function Profile() {
   const { user, signOut } = useAuth();
   const router = useRouter();
+  const { isDesktop } = useResponsive();
   const [isEditing, setIsEditing] = useState(false);
   const [displayName, setDisplayName] = useState(user?.displayName || "");
   const [selectedInterests, setSelectedInterests] = useState<string[]>(
@@ -96,20 +99,23 @@ export default function Profile() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Profile</Text>
-        {!isEditing ? (
-          <TouchableOpacity onPress={() => setIsEditing(true)}>
-            <Text style={styles.editButton}>Edit</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity onPress={handleSave} disabled={loading}>
-            <Text style={styles.saveButton}>Save</Text>
-          </TouchableOpacity>
-        )}
+      <View style={[styles.header, isDesktop && styles.headerDesktop]}>
+        <ScreenContainer style={styles.headerRow}>
+          <Text style={styles.title}>Profile</Text>
+          {!isEditing ? (
+            <TouchableOpacity onPress={() => setIsEditing(true)}>
+              <Text style={styles.editButton}>Edit</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={handleSave} disabled={loading}>
+              <Text style={styles.saveButton}>Save</Text>
+            </TouchableOpacity>
+          )}
+        </ScreenContainer>
       </View>
 
       <ScrollView style={styles.content}>
+        <ScreenContainer>
         <View style={styles.profileSection}>
           <View style={styles.avatarContainer}>
             {user.photoURL ? (
@@ -211,6 +217,7 @@ export default function Profile() {
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
           <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
+        </ScreenContainer>
       </ScrollView>
     </View>
   );
@@ -230,6 +237,14 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
+  },
+  headerDesktop: {
+    paddingTop: 24,
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   title: {
     fontSize: 28,
